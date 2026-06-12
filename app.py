@@ -55,7 +55,7 @@ class ArticleRequest(BaseModel):
 class PredictionResponse(BaseModel):
     headline: str
     category: str
-    generated_text: str
+    # generated_text: str
 
 
 # ── Helper functions ─────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ def generate_headline_and_category(article_body: str):
     return {
         "headline": headline,
         "category": category,
-        "generated_text": generated_text,
+        # "generated_text": generated_text,
     }
 
 
@@ -153,7 +153,7 @@ def predict(request: ArticleRequest):
         return {
             "headline": "",
             "category": "unknown",
-            "generated_text": "",
+            # "generated_text": "",
         }
 
     result = generate_headline_and_category(request.article)
