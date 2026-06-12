@@ -12,6 +12,7 @@ env/
 
 # Model files - do not push large trained model to GitHub
 model/
+modal_v1.zip
 *.safetensors
 *.bin
 *.pt
