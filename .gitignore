@@ -11,7 +11,7 @@ env/
 .venv/
 
 # Model files - do not push large trained model to GitHub
-model/
+models/
 modal_v1.zip
 *.safetensors
 *.bin
