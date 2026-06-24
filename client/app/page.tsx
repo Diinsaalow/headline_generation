@@ -17,9 +17,9 @@ const features = [
       "Built on a multilingual T5 model adapted specifically for Somali headline and category tasks.",
   },
   {
-    title: "Simple REST API",
+    title: "Account history",
     description:
-      "Send article text to a single endpoint and receive structured headline and category output.",
+      "Create an account to save every generated headline alongside the original article and timestamp.",
   },
 ];
 
@@ -28,7 +28,7 @@ const steps = [
     step: "1",
     title: "Paste your article",
     description:
-      "Provide the full body of a Somali news article — the model reads the content, not just a summary.",
+      "Provide the full body of a Somali news article - the model reads the content, not just a summary.",
   },
   {
     step: "2",
@@ -38,9 +38,9 @@ const steps = [
   },
   {
     step: "3",
-    title: "Review the results",
+    title: "Review or revisit later",
     description:
-      "Use the generated headline for publishing and the category for sorting or editorial workflows.",
+      "Use the generated headline right away or open your saved history whenever you want to review it again.",
   },
 ];
 
@@ -56,19 +56,27 @@ export default function Home() {
             Somali NLP
           </p>
           <h1 className="mb-6 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-            Generate headlines and classify news articles in Somali
+            Generate, save, and revisit Somali news headlines
           </h1>
           <p className="mb-10 max-w-xl text-lg leading-relaxed text-slate-600">
             A lightweight tool powered by a fine-tuned mT5 model. Paste an
-            article and get a headline plus category — built for Somali news
-            workflows.
+            article, get a headline plus category, and keep each result in your
+            personal history.
           </p>
-          <Link
-            href="/predict"
-            className="rounded-md border border-blue-600 bg-blue-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700"
-          >
-            Generate a headline
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/predict"
+              className="rounded-md border border-blue-600 bg-blue-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700"
+            >
+              Generate a headline
+            </Link>
+            <Link
+              href="/register"
+              className="rounded-md border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              Create an account
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -85,7 +93,7 @@ export default function Home() {
               Three simple steps
             </h2>
             <p className="text-blue-100">
-              From article text to headline and category.
+              From article text to saved headline and category.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-3">

@@ -5,3 +5,7 @@ transformers
 sentencepiece
 protobuf
 pydantic
+pymongo
+python-jose[cryptography]
+passlib
+email-validator
