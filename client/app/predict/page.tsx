@@ -307,20 +307,34 @@ export default function PredictPage() {
               </div>
 
               <div className="space-y-5 p-6">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  This headline has been saved to your account history.
+                <div
+                  className={`rounded-lg border px-4 py-3 text-sm ${
+                    result.status === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  {result.status === "success"
+                    ? "This headline has been saved to your account history."
+                    : "This generation attempt was saved to your history with a failed status."}
                 </div>
+
+                {result.error_message && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {result.error_message}
+                  </div>
+                )}
 
                 <div>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Headline
                   </p>
                   <p className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-base font-medium leading-relaxed text-slate-900">
-                    {result.headline}
+                    {result.headline || "No headline generated."}
                   </p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-lg border border-slate-200 p-4">
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
                       Category
@@ -342,6 +356,21 @@ export default function PredictPage() {
                         {result.model_used}
                       </p>
                     )}
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 p-4">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Status
+                    </p>
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium capitalize ${
+                        result.status === "success"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-red-200 bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {result.status}
+                    </span>
                   </div>
                 </div>
               </div>

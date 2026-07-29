@@ -5,6 +5,7 @@ type ApiFetchOptions = {
   token?: string | null;
   body?: unknown;
   signal?: AbortSignal;
+  params?: Record<string, string | number | boolean | null | undefined>;
 };
 
 export async function getErrorMessage(response: Response) {
@@ -14,6 +15,27 @@ export async function getErrorMessage(response: Response) {
   } catch {
     return `Request failed (${response.status})`;
   }
+}
+
+function buildQueryString(
+  params?: Record<string, string | number | boolean | null | undefined>,
+) {
+  if (!params) {
+    return "";
+  }
+
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+
+    searchParams.set(key, String(value));
+  }
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
 }
 
 export async function apiFetch<T>(
@@ -30,12 +52,15 @@ export async function apiFetch<T>(
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
+  const response = await fetch(
+    `${API_URL}${path}${buildQueryString(options.params)}`,
+    {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    },
+  );
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response));

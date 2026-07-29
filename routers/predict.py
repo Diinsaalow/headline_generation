@@ -25,17 +25,51 @@ def predict(request: ArticleRequest, current_user: dict = Depends(get_current_us
             detail="Article text is required.",
         )
 
-    prediction = run_inference(article, request.model_id)
-    history_item = create_history_entry(
-        user_id=current_user["id"],
-        article=article,
-        headline=prediction["headline"],
-        category=prediction["category"],
-        model_used=prediction["model_used"],
-    )
+    model_id = request.model_id or get_default_model_id() or ""
 
-    return {
-        **prediction,
-        "history_id": history_item["id"],
-        "created_at": history_item["created_at"],
-    }
+    try:
+        prediction = run_inference(article, request.model_id)
+        history_item = create_history_entry(
+            user_id=current_user["id"],
+            article=article,
+            headline=prediction["headline"],
+            category=prediction["category"],
+            model_used=prediction["model_used"],
+            entry_status="success",
+        )
+
+        return {
+            **prediction,
+            "status": "success",
+            "error_message": None,
+            "history_id": history_item["id"],
+            "created_at": history_item["created_at"],
+        }
+    except HTTPException as error:
+        if model_id:
+            create_history_entry(
+                user_id=current_user["id"],
+                article=article,
+                headline="",
+                category="unknown",
+                model_used=model_id,
+                entry_status="failed",
+                error_message=str(error.detail),
+            )
+        raise
+    except Exception as error:
+        if model_id:
+            create_history_entry(
+                user_id=current_user["id"],
+                article=article,
+                headline="",
+                category="unknown",
+                model_used=model_id,
+                entry_status="failed",
+                error_message=str(error),
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Headline generation failed. Please try again.",
+        ) from error

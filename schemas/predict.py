@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +14,8 @@ class PredictionResponse(BaseModel):
     headline: str
     category: str
     model_used: str
+    status: Literal["success", "failed"] = "success"
+    error_message: str | None = None
     created_at: datetime
 
 

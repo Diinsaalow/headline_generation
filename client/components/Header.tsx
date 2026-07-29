@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 const navLinks = [
+  { label: "News", href: "/news" },
   { label: "How it works", href: "/#how-it-works" },
   { label: "Features", href: "/#features" },
 ];

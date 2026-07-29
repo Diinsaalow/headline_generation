@@ -7,7 +7,7 @@ __pycache__/
 
 # Virtual environment
 venv/
-env/
+# env/
 .venv/
 
 # Model files - do not push large trained model to GitHub
@@ -27,6 +27,6 @@ modal_v1.zip
 *.log
 
 # Environment files
-.env
-.env.local
-.env.*.local
+# .env
+# .env.local
+# .env.*.local

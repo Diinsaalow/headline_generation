@@ -65,6 +65,12 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
+              href="/news"
+              className="rounded-md border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              Browse headlines
+            </Link>
+            <Link
               href="/predict"
               className="rounded-md border border-blue-600 bg-blue-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700"
             >

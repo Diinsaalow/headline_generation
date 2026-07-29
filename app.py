@@ -8,6 +8,7 @@ from db.mongodb import close_mongo_connection, connect_to_mongo, get_mongo_statu
 from middleware.jwt_auth import JWTAuthMiddleware
 from routers.auth import router as auth_router
 from routers.history import router as history_router
+from routers.news import router as news_router
 from routers.predict import router as predict_router
 from services.inference import get_runtime_status, initialize_default_model
 
@@ -43,6 +44,7 @@ app.add_middleware(JWTAuthMiddleware)
 
 app.include_router(auth_router)
 app.include_router(history_router)
+app.include_router(news_router)
 app.include_router(predict_router)
 
 

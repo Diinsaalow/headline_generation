@@ -14,6 +14,10 @@ _last_connection_error: str | None = None
 def initialize_indexes(database: Database) -> None:
     database.users.create_index("email", unique=True)
     database.history.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    database.history.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
+    database.history.create_index([("user_id", ASCENDING), ("category", ASCENDING)])
+    database.history.create_index([("user_id", ASCENDING), ("model_used", ASCENDING)])
+    database.history.create_index([("status", ASCENDING), ("created_at", DESCENDING)])
 
 
 def connect_to_mongo() -> Database | None:

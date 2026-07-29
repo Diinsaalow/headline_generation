@@ -148,16 +148,36 @@ export default function HistoryDetailPage() {
                   <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
                     {item.model_used}
                   </span>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium capitalize ${
+                      item.status === "success"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-red-200 bg-red-50 text-red-700"
+                    }`}
+                  >
+                    {item.status}
+                  </span>
                 </div>
               </div>
 
               <div className="grid gap-6">
+                {item.status === "failed" && item.error_message && (
+                  <section>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Error details
+                    </p>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm leading-relaxed text-red-700">
+                      {item.error_message}
+                    </div>
+                  </section>
+                )}
+
                 <section>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Generated headline
                   </p>
                   <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-5 text-lg font-medium leading-relaxed text-slate-900">
-                    {item.headline}
+                    {item.headline || "No headline was generated for this attempt."}
                   </div>
                 </section>
 
