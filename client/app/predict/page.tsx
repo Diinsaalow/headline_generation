@@ -4,12 +4,17 @@ import Link from "next/link";
 import {
   type FormEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
 import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  getCharacterCountState,
+  validateSomaliArticle,
+} from "@/lib/article-validation";
 import { apiFetch } from "@/lib/api";
 import type {
   ModelInfo,
@@ -17,19 +22,60 @@ import type {
   PredictionResult,
 } from "@/lib/types";
 
+const DEFAULT_MAX_CHARACTERS = 1476;
+const DEFAULT_MIN_WORDS = 5;
+
 export default function PredictPage() {
   const { token } = useAuth();
   const [article, setArticle] = useState("");
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
+  const [modelLimits, setModelLimits] = useState({
+    maxCharacters: DEFAULT_MAX_CHARACTERS,
+    minWords: DEFAULT_MIN_WORDS,
+  });
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(
+    null,
+  );
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const articleInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const selectedModelInfo = useMemo(
+    () => models.find((model) => model.id === selectedModel) ?? null,
+    [models, selectedModel],
+  );
+
+  const activeLimits = useMemo(
+    () => ({
+      maxCharacters:
+        selectedModelInfo?.max_article_characters ?? modelLimits.maxCharacters,
+      minWords: selectedModelInfo?.min_article_words ?? modelLimits.minWords,
+    }),
+    [modelLimits, selectedModelInfo],
+  );
+
+  const validation = useMemo(
+    () =>
+      article.trim()
+        ? validateSomaliArticle(article, {
+            maxCharacters: activeLimits.maxCharacters,
+            minWords: activeLimits.minWords,
+          })
+        : { valid: false, message: null },
+    [article, activeLimits.maxCharacters, activeLimits.minWords],
+  );
+
+  const characterCount = getCharacterCountState(
+    article.length,
+    activeLimits.maxCharacters,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -42,6 +88,10 @@ export default function PredictPage() {
         const availableModels = Array.isArray(data.models) ? data.models : [];
 
         setModels(availableModels);
+        setModelLimits({
+          maxCharacters: data.max_article_characters ?? DEFAULT_MAX_CHARACTERS,
+          minWords: data.min_article_words ?? DEFAULT_MIN_WORDS,
+        });
         setSelectedModel(
           data.default_model &&
             availableModels.some((model) => model.id === data.default_model)
@@ -99,6 +149,24 @@ export default function PredictPage() {
     };
   }, [modalOpen]);
 
+  function handleArticleChange(value: string) {
+    if (value.length <= activeLimits.maxCharacters) {
+      setArticle(value);
+    } else {
+      setArticle(value.slice(0, activeLimits.maxCharacters));
+    }
+
+    setValidationMessage(null);
+    setError(null);
+  }
+
+  function handleClearArticle() {
+    setArticle("");
+    setValidationMessage(null);
+    setError(null);
+    articleInputRef.current?.focus();
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -107,8 +175,19 @@ export default function PredictPage() {
       return;
     }
 
+    const submitValidation = validateSomaliArticle(trimmedArticle, {
+      maxCharacters: activeLimits.maxCharacters,
+      minWords: activeLimits.minWords,
+    });
+
+    if (!submitValidation.valid) {
+      setValidationMessage(submitValidation.message);
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setValidationMessage(null);
     setResult(null);
     setModalOpen(false);
 
@@ -138,6 +217,20 @@ export default function PredictPage() {
   const resultModelName =
     models.find((model) => model.id === result?.model_used)?.name ??
     result?.model_used;
+
+  const canSubmit =
+    article.trim().length > 0 &&
+    validation.valid &&
+    selectedModel &&
+    !modelsLoading &&
+    !loading;
+
+  const counterClassName =
+    characterCount.tone === "error"
+      ? "text-red-600"
+      : characterCount.tone === "warning"
+        ? "text-amber-600"
+        : "text-slate-400";
 
   return (
     <AuthGate>
@@ -209,6 +302,13 @@ export default function PredictPage() {
               {modelsError && (
                 <p className="mt-2 text-sm text-red-600">{modelsError}</p>
               )}
+              {selectedModelInfo && (
+                <p className="mt-2 text-xs text-slate-500">
+                  This model accepts up to{" "}
+                  {selectedModelInfo.max_article_characters.toLocaleString()}{" "}
+                  characters ({selectedModelInfo.max_input_tokens} tokens).
+                </p>
+              )}
             </div>
 
             <div>
@@ -219,26 +319,62 @@ export default function PredictPage() {
                 >
                   Article text
                 </label>
-                <span className="text-xs text-slate-400">
-                  {article.length.toLocaleString()} characters
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs ${counterClassName}`}>
+                    {characterCount.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearArticle}
+                    disabled={!article || loading}
+                    className="text-xs font-medium text-slate-600 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
               <textarea
+                ref={articleInputRef}
                 id="article"
                 name="article"
                 rows={12}
                 value={article}
-                onChange={(event) => setArticle(event.target.value)}
+                onChange={(event) => handleArticleChange(event.target.value)}
                 placeholder="Paste your Somali news article here..."
                 disabled={loading}
-                className="w-full resize-y rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500"
+                maxLength={activeLimits.maxCharacters}
+                aria-invalid={Boolean(validationMessage || (article.trim() && !validation.valid))}
+                aria-describedby="article-help article-validation"
+                className={`w-full resize-y rounded-lg border bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500 ${
+                  validationMessage || (article.trim() && !validation.valid)
+                    ? "border-red-300 focus:border-red-500"
+                    : "border-slate-200"
+                }`}
               />
+              <p id="article-help" className="mt-2 text-xs text-slate-500">
+                Somali news articles only. English, Arabic, Swahili, math, and
+                symbol-heavy input are blocked before submission.
+              </p>
+              {article.trim() && !validation.valid && validation.message && (
+                <p
+                  id="article-validation"
+                  className="mt-2 text-sm text-red-600"
+                  role="alert"
+                >
+                  {validation.message}
+                </p>
+              )}
+              {validationMessage && (
+                <p className="mt-2 text-sm text-red-600" role="alert">
+                  {validationMessage}
+                </p>
+              )}
             </div>
 
             <button
               ref={submitButtonRef}
               type="submit"
-              disabled={!article.trim() || !selectedModel || modelsLoading || loading}
+              disabled={!canSubmit}
               className="flex w-full items-center justify-center gap-2 rounded-md border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
             >
               {loading && (

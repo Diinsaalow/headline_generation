@@ -13,11 +13,17 @@ export type AuthResponse = {
 export type ModelInfo = {
   id: string;
   name: string;
+  max_input_tokens: number;
+  max_article_characters: number;
+  min_article_words: number;
 };
 
 export type ModelsResponse = {
   models: ModelInfo[];
   default_model: string | null;
+  max_input_tokens: number;
+  max_article_characters: number;
+  min_article_words: number;
 };
 
 export type HistoryStatus = "success" | "failed";
