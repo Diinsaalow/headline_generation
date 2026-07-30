@@ -53,8 +53,8 @@ Copy the backend `.env.example` at the project root and set values for your
 environment.
 
 ```bash
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB_NAME=headline_ai
+MONGODB_URI=mongodb+srv://USER:PASSWORD@cluster.example.mongodb.net/?appName=headline-generation
+MONGODB_DB_NAME=headline-generation
 JWT_SECRET_KEY=replace-with-a-long-random-secret
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 CLIENT_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
@@ -68,9 +68,50 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## Backend setup
 
+You can run the API with Docker or directly on your machine. Both options use
+your MongoDB Atlas cluster (or any remote MongoDB) via `MONGODB_URI` in `.env`.
+
+### Option A: Docker (API only)
+
+Requirements:
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
+- Trained model files in `./models/<model-id>/` (each folder needs a `config.json`)
+- A `.env` file with your Atlas connection string (copy from `.env.example`)
+
+```bash
+docker compose up --build
+```
+
+The API is available at `http://localhost:8000`. MongoDB stays on Atlas — Docker
+only runs the FastAPI container.
+
+Useful commands:
+
+```bash
+docker compose up --build -d   # run in the background
+docker compose logs -f api     # follow API logs
+docker compose down            # stop the container
+```
+
+The frontend still runs separately (see below). Point it at
+`http://localhost:8000`.
+
+### Option B: Local Python (no Docker)
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 python3 -m pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+Set `MONGODB_URI` and other values in `.env`, or export them in your shell.
+
+## Frontend setup
+
+```bash
+cd client
+pnpm install
+pnpm dev
 ```

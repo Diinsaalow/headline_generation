@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+
+# Git and editor
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Frontend (run separately or add its own Dockerfile later)
+client/
+
+# Tests and dev tooling
+tests/
+requirements-dev.txt
+*.md
+
+# Model weights are mounted at runtime; do not bake them into the image
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+modal_v1.zip
+
+# Local environment files
+.env
+.env.*
+!.env.example
