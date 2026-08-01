@@ -327,7 +327,7 @@ export default function PredictPage() {
                     type="button"
                     onClick={handleClearArticle}
                     disabled={!article || loading}
-                    className="text-xs font-medium text-slate-600 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md border border-red-600 bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     Clear
                   </button>
