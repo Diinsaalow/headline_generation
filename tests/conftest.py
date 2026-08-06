@@ -67,16 +67,20 @@ def seed_history(user_id: str, count: int = 3) -> list[dict]:
     items = []
     categories = ["politics", "sports", "business"]
     models = ["model-a", "model-b"]
+    now = datetime.now(timezone.utc)
 
     for index in range(count):
+        is_success = index % 2 == 0
         item = create_history_entry(
             user_id=user_id,
             article=f"Article content number {index} about Somali news.",
             headline=f"Generated headline {index}",
             category=categories[index % len(categories)],
             model_used=models[index % len(models)],
-            entry_status="success" if index % 2 == 0 else "failed",
-            error_message="Inference failed." if index % 2 else None,
+            entry_status="success" if is_success else "failed",
+            error_message="Inference failed." if not is_success else None,
+            published_at=now if is_success else None,
+            generation_time_seconds=1.25 + index if is_success else None,
         )
         items.append(item)
 

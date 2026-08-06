@@ -29,13 +29,43 @@ export type ModelsResponse = {
 export type HistoryStatus = "success" | "failed";
 
 export type PredictionResult = {
-  history_id: string;
   headline: string;
   category: string;
   model_used: string;
   status: HistoryStatus;
   error_message: string | null;
+  generation_time_seconds: number;
+};
+
+export type GeneratedDraft = {
+  article: string;
+  headline: string;
+  category: string;
+  model_used: string;
+  generation_time_seconds: number;
+};
+
+export type PublishNewsRequest = {
+  article: string;
+  headline: string;
+  category: string;
+  model_used: string;
+  generation_time_seconds: number;
+};
+
+export type PublishNewsResponse = {
+  id: string;
+  headline: string;
+  category: string;
+  published_at: string;
+  article: string;
+  model_used: string;
+  generation_time_seconds: number;
   created_at: string;
+};
+
+export type NewsCategoriesResponse = {
+  categories: string[];
 };
 
 export type HistoryItem = {
@@ -88,10 +118,14 @@ export type PublicNewsSummary = {
   headline: string;
   category: string;
   created_at: string;
+  article_preview: string;
+  published_at: string | null;
 };
 
 export type PublicNewsDetail = PublicNewsSummary & {
   article: string;
+  model_used: string;
+  generation_time_seconds: number | null;
 };
 
 export type PublicNewsListResponse = {

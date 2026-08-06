@@ -18,6 +18,7 @@ def initialize_indexes(database: Database) -> None:
     database.history.create_index([("user_id", ASCENDING), ("category", ASCENDING)])
     database.history.create_index([("user_id", ASCENDING), ("model_used", ASCENDING)])
     database.history.create_index([("status", ASCENDING), ("created_at", DESCENDING)])
+    database.history.create_index([("published_at", DESCENDING)])
 
 
 def connect_to_mongo() -> Database | None:

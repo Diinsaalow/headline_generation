@@ -12,6 +12,7 @@ VALID_STATUSES = {"success", "failed"}
 VALID_SORT_FIELDS = {"created_at", "headline", "category", "model_used", "status"}
 DEFAULT_PAGE_SIZE = 10
 MAX_PAGE_SIZE = 50
+_UNSET = object()
 
 
 def get_history_collection():
@@ -28,6 +29,8 @@ def serialize_history(document: dict) -> dict:
         "status": document.get("status", "success"),
         "error_message": document.get("error_message"),
         "created_at": document["created_at"],
+        "published_at": document.get("published_at"),
+        "generation_time_seconds": document.get("generation_time_seconds"),
     }
 
 
@@ -58,6 +61,8 @@ def create_history_entry(
     *,
     entry_status: str = "success",
     error_message: str | None = None,
+    published_at: datetime | None = _UNSET,
+    generation_time_seconds: float | None = _UNSET,
 ) -> dict:
     if entry_status not in VALID_STATUSES:
         raise HTTPException(
@@ -88,9 +93,38 @@ def create_history_entry(
     if error_message:
         history_document["error_message"] = error_message.strip()
 
+    if published_at is not _UNSET:
+        history_document["published_at"] = published_at
+    elif entry_status == "success":
+        history_document["published_at"] = None
+
+    if generation_time_seconds is not _UNSET:
+        history_document["generation_time_seconds"] = generation_time_seconds
+
     result = get_history_collection().insert_one(history_document)
     history_document["_id"] = result.inserted_id
     return serialize_history(history_document)
+
+
+def publish_news_entry(
+    user_id: str,
+    article: str,
+    headline: str,
+    category: str,
+    model_used: str,
+    generation_time_seconds: float,
+) -> dict:
+    now = datetime.now(timezone.utc)
+    return create_history_entry(
+        user_id=user_id,
+        article=article,
+        headline=headline,
+        category=category,
+        model_used=model_used,
+        entry_status="success",
+        published_at=now,
+        generation_time_seconds=generation_time_seconds,
+    )
 
 
 def _build_history_query(

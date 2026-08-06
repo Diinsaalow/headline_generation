@@ -4,6 +4,7 @@ import re
 from fastapi import HTTPException, status
 from pymongo import DESCENDING
 
+from services.categories import get_system_news_categories
 from services.history_service import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -11,11 +12,29 @@ from services.history_service import (
     require_object_id,
 )
 
-# Include legacy records created before the status field was added.
+ARTICLE_PREVIEW_LENGTH = 160
+
+# Include published articles OR legacy records (no published_at field)
 PUBLIC_NEWS_FILTER = {
     "status": {"$ne": "failed"},
     "headline": {"$nin": [None, ""]},
+    "$or": [
+        {"published_at": {"$type": "date"}},
+        {"published_at": {"$exists": False}},
+    ],
 }
+
+
+def truncate_article_preview(article: str, max_length: int = ARTICLE_PREVIEW_LENGTH) -> str:
+    cleaned = article.strip()
+    if len(cleaned) <= max_length:
+        return cleaned
+
+    truncated = cleaned[:max_length].rstrip()
+    if " " in truncated:
+        truncated = truncated.rsplit(" ", 1)[0]
+
+    return f"{truncated}..."
 
 
 def serialize_public_news_summary(document: dict) -> dict:
@@ -24,6 +43,8 @@ def serialize_public_news_summary(document: dict) -> dict:
         "headline": document["headline"],
         "category": document.get("category", "unknown"),
         "created_at": document["created_at"],
+        "article_preview": truncate_article_preview(document["article"]),
+        "published_at": document.get("published_at"),
     }
 
 
@@ -31,6 +52,8 @@ def serialize_public_news_detail(document: dict) -> dict:
     return {
         **serialize_public_news_summary(document),
         "article": document["article"],
+        "model_used": document.get("model_used", ""),
+        "generation_time_seconds": document.get("generation_time_seconds"),
     }
 
 
@@ -95,7 +118,7 @@ def list_public_news(
     skip = (page - 1) * page_size
     cursor = (
         collection.find(query)
-        .sort("created_at", DESCENDING)
+        .sort([("published_at", DESCENDING), ("created_at", DESCENDING)])
         .skip(skip)
         .limit(page_size)
     )
@@ -110,12 +133,7 @@ def list_public_news(
 
 
 def get_public_news_categories() -> list[str]:
-    collection = get_history_collection()
-    return sorted(
-        value
-        for value in collection.distinct("category", PUBLIC_NEWS_FILTER)
-        if isinstance(value, str) and value.strip()
-    )
+    return get_system_news_categories()
 
 
 def get_public_news_item(news_id: str) -> dict:

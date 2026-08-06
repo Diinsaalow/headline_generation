@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from dependencies.auth import get_current_user
@@ -46,22 +48,15 @@ def predict(request: ArticleRequest, current_user: dict = Depends(get_current_us
     model_id = request.model_id or get_default_model_id() or ""
 
     try:
+        start_time = time.perf_counter()
         prediction = run_inference(article, request.model_id)
-        history_item = create_history_entry(
-            user_id=current_user["id"],
-            article=article,
-            headline=prediction["headline"],
-            category=prediction["category"],
-            model_used=prediction["model_used"],
-            entry_status="success",
-        )
+        generation_time_seconds = round(time.perf_counter() - start_time, 2)
 
         return {
             **prediction,
             "status": "success",
             "error_message": None,
-            "history_id": history_item["id"],
-            "created_at": history_item["created_at"],
+            "generation_time_seconds": generation_time_seconds,
         }
     except HTTPException as error:
         if model_id:

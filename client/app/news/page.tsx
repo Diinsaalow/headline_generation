@@ -1,19 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import CategoryFilterBar from "@/components/news/CategoryFilterBar";
+import NewsCard from "@/components/news/NewsCard";
 import { apiFetch } from "@/lib/api";
+import { getNewsCategories } from "@/lib/categories";
 import type { PublicNewsListResponse } from "@/lib/types";
 
 const PAGE_SIZE = 12;
-
-function formatDate(dateString: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(dateString));
-}
+const NEWS_CATEGORIES = getNewsCategories();
 
 export default function NewsPage() {
   const [items, setItems] = useState<PublicNewsListResponse["items"]>([]);
@@ -22,6 +18,7 @@ export default function NewsPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,8 +36,9 @@ export default function NewsPage() {
       page,
       page_size: PAGE_SIZE,
       search: debouncedSearch || undefined,
+      category: selectedCategory || undefined,
     }),
-    [page, debouncedSearch],
+    [page, debouncedSearch, selectedCategory],
   );
 
   useEffect(() => {
@@ -81,9 +79,26 @@ export default function NewsPage() {
     return () => controller.abort();
   }, [queryParams]);
 
+  function handleCategoryChange(category: string) {
+    setSelectedCategory(category);
+    setPage(1);
+  }
+
+  const emptyMessage = debouncedSearch
+    ? "Try a different search term."
+    : selectedCategory
+      ? "No articles in this category yet."
+      : "Headlines will appear here once articles are published on the platform.";
+
+  const emptyTitle = debouncedSearch
+    ? "No headlines found"
+    : selectedCategory
+      ? "No articles in this category"
+      : "No headlines yet";
+
   return (
     <main className="flex-1 bg-slate-50/60">
-      <div className="mx-auto max-w-4xl px-6 py-16">
+      <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="mb-10 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-wide text-blue-600">
             Platform news
@@ -92,18 +107,26 @@ export default function NewsPage() {
             Generated headlines
           </h1>
           <p className="mx-auto max-w-2xl text-slate-600">
-            Browse all Somali news headlines generated on this platform. Click
-            any headline to read the full article.
+            Browse published Somali news headlines. Filter by category or search
+            to find articles.
           </p>
         </div>
 
-        <div className="mb-8">
+        <div className="mb-6">
           <input
             type="search"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search headlines..."
             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600"
+          />
+        </div>
+
+        <div className="mb-8">
+          <CategoryFilterBar
+            categories={NEWS_CATEGORIES}
+            selectedCategory={selectedCategory}
+            onChange={handleCategoryChange}
           />
         </div>
 
@@ -121,12 +144,10 @@ export default function NewsPage() {
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
             <h2 className="mb-2 text-xl font-semibold text-slate-900">
-              {debouncedSearch ? "No headlines found" : "No headlines yet"}
+              {emptyTitle}
             </h2>
             <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-600">
-              {debouncedSearch
-                ? "Try a different search term."
-                : "Headlines will appear here once articles are processed on the platform."}
+              {emptyMessage}
             </p>
           </div>
         ) : (
@@ -135,25 +156,9 @@ export default function NewsPage() {
               {total} headline{total === 1 ? "" : "s"} published
             </p>
 
-            <div className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/news/${item.id}`}
-                  className="group block px-6 py-5 transition-colors hover:bg-slate-50"
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-500">
-                      {formatDate(item.created_at)}
-                    </span>
-                    <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium capitalize text-blue-700">
-                      {item.category}
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-semibold leading-snug text-slate-900 transition-colors group-hover:text-blue-600">
-                    {item.headline}
-                  </h2>
-                </Link>
+                <NewsCard key={item.id} item={item} />
               ))}
             </div>
 
@@ -165,7 +170,9 @@ export default function NewsPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    onClick={() =>
+                      setPage((current) => Math.max(1, current - 1))
+                    }
                     disabled={page <= 1}
                     className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >

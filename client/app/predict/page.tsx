@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   type FormEvent,
   useEffect,
@@ -11,15 +10,22 @@ import {
 
 import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
+import GeneratedResultPanel from "@/components/predict/GeneratedResultPanel";
+import GenerationTimer from "@/components/predict/GenerationTimer";
+import ModelSelect from "@/components/predict/ModelSelect";
+import PredictHero from "@/components/predict/PredictHero";
+import Toast from "@/components/ui/Toast";
 import {
   getCharacterCountState,
   validateSomaliArticle,
 } from "@/lib/article-validation";
 import { apiFetch } from "@/lib/api";
 import type {
+  GeneratedDraft,
   ModelInfo,
   ModelsResponse,
   PredictionResult,
+  PublishNewsResponse,
 } from "@/lib/types";
 
 const DEFAULT_MAX_CHARACTERS = 1476;
@@ -36,16 +42,26 @@ export default function PredictPage() {
   });
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [result, setResult] = useState<PredictionResult | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [draft, setDraft] = useState<GeneratedDraft | null>(null);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number | null>(null);
+  const [finalSeconds, setFinalSeconds] = useState<number | null>(null);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const articleInputRef = useRef<HTMLTextAreaElement>(null);
+  const timerRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
 
   const selectedModelInfo = useMemo(
     () => models.find((model) => model.id === selectedModel) ?? null,
@@ -125,7 +141,15 @@ export default function PredictPage() {
   }, []);
 
   useEffect(() => {
-    if (!modalOpen) {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!resultModalOpen) {
       return;
     }
 
@@ -135,8 +159,8 @@ export default function PredictPage() {
     closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setModalOpen(false);
+      if (event.key === "Escape" && !publishing) {
+        setResultModalOpen(false);
       }
     }
 
@@ -147,21 +171,64 @@ export default function PredictPage() {
       document.removeEventListener("keydown", handleKeyDown);
       submitButton?.focus();
     };
-  }, [modalOpen]);
+  }, [resultModalOpen, publishing]);
+
+  function clearTimer() {
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function invalidateDraftIfChanged(nextArticle: string, nextModel?: string) {
+    if (!draft) {
+      return;
+    }
+
+    const articleChanged = nextArticle.trim() !== draft.article.trim();
+    const modelChanged =
+      nextModel !== undefined && nextModel !== draft.model_used;
+
+    if (articleChanged || modelChanged) {
+      setDraft(null);
+      setPublishedId(null);
+      setResultModalOpen(false);
+      setFinalSeconds(null);
+      setElapsedSeconds(null);
+    }
+  }
 
   function handleArticleChange(value: string) {
     if (value.length <= activeLimits.maxCharacters) {
+      invalidateDraftIfChanged(value);
       setArticle(value);
     } else {
-      setArticle(value.slice(0, activeLimits.maxCharacters));
+      const trimmed = value.slice(0, activeLimits.maxCharacters);
+      invalidateDraftIfChanged(trimmed);
+      setArticle(trimmed);
     }
 
     setValidationMessage(null);
     setError(null);
   }
 
+  function handleModelChange(modelId: string) {
+    invalidateDraftIfChanged(article, modelId);
+    setSelectedModel(modelId);
+  }
+
+  function handleEditArticle() {
+    setResultModalOpen(false);
+    window.setTimeout(() => {
+      articleInputRef.current?.focus();
+    }, 0);
+  }
+
   function handleClearArticle() {
     setArticle("");
+    setDraft(null);
+    setPublishedId(null);
+    setResultModalOpen(false);
     setValidationMessage(null);
     setError(null);
     articleInputRef.current?.focus();
@@ -188,8 +255,19 @@ export default function PredictPage() {
     setLoading(true);
     setError(null);
     setValidationMessage(null);
-    setResult(null);
-    setModalOpen(false);
+    setDraft(null);
+    setResultModalOpen(false);
+    setPublishedId(null);
+    setFinalSeconds(null);
+    setElapsedSeconds(0);
+    startTimeRef.current = performance.now();
+
+    clearTimer();
+    timerRef.current = window.setInterval(() => {
+      if (startTimeRef.current !== null) {
+        setElapsedSeconds((performance.now() - startTimeRef.current) / 1000);
+      }
+    }, 100);
 
     try {
       const data = await apiFetch<PredictionResult>("/predict", {
@@ -201,22 +279,85 @@ export default function PredictPage() {
         },
       });
 
-      setResult(data);
-      setModalOpen(true);
+      const duration =
+        startTimeRef.current !== null
+          ? (performance.now() - startTimeRef.current) / 1000
+          : data.generation_time_seconds;
+
+      setFinalSeconds(duration);
+
+      if (data.status === "success" && data.headline) {
+        setDraft({
+          article: trimmedArticle,
+          headline: data.headline,
+          category: data.category,
+          model_used: data.model_used,
+          generation_time_seconds:
+            data.generation_time_seconds ?? duration ?? 0,
+        });
+        setResultModalOpen(true);
+      } else if (data.error_message) {
+        setError(data.error_message);
+      }
     } catch (submitError) {
+      if (startTimeRef.current !== null) {
+        setFinalSeconds((performance.now() - startTimeRef.current) / 1000);
+      }
+
       setError(
         submitError instanceof Error
           ? submitError.message
           : "Something went wrong while generating the headline.",
       );
     } finally {
+      clearTimer();
       setLoading(false);
     }
   }
 
+  async function handlePublish() {
+    if (!draft || !token || publishing) {
+      return;
+    }
+
+    setPublishing(true);
+    setToast(null);
+
+    try {
+      const response = await apiFetch<PublishNewsResponse>("/history/publish", {
+        method: "POST",
+        token,
+        body: {
+          article: draft.article,
+          headline: draft.headline,
+          category: draft.category,
+          model_used: draft.model_used,
+          generation_time_seconds: draft.generation_time_seconds ?? 0,
+        },
+      });
+
+      setPublishedId(response.id);
+      setToast({
+        message: "Article published successfully",
+        type: "success",
+      });
+    } catch (publishError) {
+      setToast({
+        message:
+          publishError instanceof Error
+            ? publishError.message
+            : "Could not publish the article.",
+        type: "error",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   const resultModelName =
-    models.find((model) => model.id === result?.model_used)?.name ??
-    result?.model_used;
+    models.find((model) => model.id === draft?.model_used)?.name ??
+    draft?.model_used ??
+    "";
 
   const canSubmit =
     article.trim().length > 0 &&
@@ -235,81 +376,21 @@ export default function PredictPage() {
   return (
     <AuthGate>
       <main className="flex-1 bg-slate-50/50">
-        <div className="mx-auto max-w-3xl px-6 py-16">
-          <div className="mb-10 text-center">
-            <p className="mb-3 text-sm font-medium uppercase tracking-wide text-blue-600">
-              Protected generation
-            </p>
-            <h1 className="mb-3 text-3xl font-semibold tracking-tight text-slate-900">
-              Generate and save a headline
-            </h1>
-            <p className="text-slate-600">
-              Choose a model, paste your Somali news article, and every result
-              will be stored in your account history automatically.
-            </p>
-          </div>
+        <PredictHero />
 
+        <div className="mx-auto max-w-4xl px-6 py-12">
           <form
             onSubmit={handleSubmit}
             className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
           >
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-4">
-                <label
-                  htmlFor="model"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Model
-                </label>
-                {!modelsLoading && models.length > 0 && (
-                  <span className="text-xs text-slate-400">
-                    {models.length} available
-                  </span>
-                )}
-              </div>
-              <div className="relative">
-                <select
-                  id="model"
-                  name="model"
-                  value={selectedModel}
-                  onChange={(event) => setSelectedModel(event.target.value)}
-                  disabled={modelsLoading || loading || models.length === 0}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-3 pr-10 text-sm text-slate-900 outline-none transition-colors focus:border-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
-                >
-                  {modelsLoading && <option value="">Loading models...</option>}
-                  {!modelsLoading && models.length === 0 && (
-                    <option value="">No models available</option>
-                  )}
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              {modelsError && (
-                <p className="mt-2 text-sm text-red-600">{modelsError}</p>
-              )}
-              {selectedModelInfo && (
-                <p className="mt-2 text-xs text-slate-500">
-                  This model accepts up to{" "}
-                  {selectedModelInfo.max_article_characters.toLocaleString()}{" "}
-                  characters ({selectedModelInfo.max_input_tokens} tokens).
-                </p>
-              )}
-            </div>
+            <ModelSelect
+              models={models}
+              selectedModel={selectedModel}
+              onChange={handleModelChange}
+              disabled={loading}
+              loading={modelsLoading}
+              error={modelsError}
+            />
 
             <div>
               <div className="mb-2 flex items-center justify-between gap-4">
@@ -343,7 +424,9 @@ export default function PredictPage() {
                 placeholder="Paste your Somali news article here..."
                 disabled={loading}
                 maxLength={activeLimits.maxCharacters}
-                aria-invalid={Boolean(validationMessage || (article.trim() && !validation.valid))}
+                aria-invalid={Boolean(
+                  validationMessage || (article.trim() && !validation.valid),
+                )}
                 aria-describedby="article-help article-validation"
                 className={`w-full resize-y rounded-lg border bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-600 disabled:bg-slate-50 disabled:text-slate-500 ${
                   validationMessage || (article.trim() && !validation.valid)
@@ -385,6 +468,22 @@ export default function PredictPage() {
               )}
               {loading ? "Generating headline..." : "Generate headline"}
             </button>
+
+            <GenerationTimer
+              loading={loading}
+              elapsedSeconds={elapsedSeconds}
+              finalSeconds={finalSeconds}
+            />
+
+            {draft && !resultModalOpen && (
+              <button
+                type="button"
+                onClick={() => setResultModalOpen(true)}
+                className="w-full rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-blue-600 transition-colors hover:border-slate-300 hover:bg-slate-50"
+              >
+                View generated result
+              </button>
+            )}
           </form>
 
           {error && (
@@ -397,7 +496,7 @@ export default function PredictPage() {
           )}
         </div>
 
-        {modalOpen && result && (
+        {resultModalOpen && draft && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             role="dialog"
@@ -407,29 +506,31 @@ export default function PredictPage() {
             <button
               type="button"
               aria-label="Close result"
-              onClick={() => setModalOpen(false)}
-              className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-[2px]"
+              onClick={() => setResultModalOpen(false)}
+              disabled={publishing}
+              className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-[2px] disabled:cursor-not-allowed"
             />
 
-            <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+            <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-5">
                 <div>
                   <p className="mb-1 text-xs font-medium uppercase tracking-wide text-blue-600">
-                    Saved successfully
+                    Generated result
                   </p>
                   <h2
                     id="result-modal-title"
                     className="text-xl font-semibold text-slate-900"
                   >
-                    Generated result
+                    Preview your headline
                   </h2>
                 </div>
                 <button
                   ref={closeButtonRef}
                   type="button"
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => setResultModalOpen(false)}
+                  disabled={publishing}
                   aria-label="Close result"
-                  className="rounded-md border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                  className="rounded-md border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <svg
                     aria-hidden="true"
@@ -442,94 +543,24 @@ export default function PredictPage() {
                 </button>
               </div>
 
-              <div className="space-y-5 p-6">
-                <div
-                  className={`rounded-lg border px-4 py-3 text-sm ${
-                    result.status === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-red-200 bg-red-50 text-red-700"
-                  }`}
-                >
-                  {result.status === "success"
-                    ? "This headline has been saved to your account history."
-                    : "This generation attempt was saved to your history with a failed status."}
-                </div>
-
-                {result.error_message && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {result.error_message}
-                  </div>
-                )}
-
-                <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Headline
-                  </p>
-                  <p className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-base font-medium leading-relaxed text-slate-900">
-                    {result.headline || "No headline generated."}
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 p-4">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Category
-                    </p>
-                    <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium capitalize text-blue-700">
-                      {result.category}
-                    </span>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 p-4">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Model used
-                    </p>
-                    <p className="text-sm font-medium text-slate-900">
-                      {resultModelName}
-                    </p>
-                    {resultModelName !== result.model_used && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {result.model_used}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 p-4">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Status
-                    </p>
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium capitalize ${
-                        result.status === "success"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-red-200 bg-red-50 text-red-700"
-                      }`}
-                    >
-                      {result.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Link
-                    href={`/history/${result.history_id}`}
-                    className="inline-flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700"
-                  >
-                    Open saved item
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="w-full rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    Keep editing
-                  </button>
-                </div>
-              </div>
+              <GeneratedResultPanel
+                draft={draft}
+                modelName={resultModelName}
+                onPublish={handlePublish}
+                onEdit={handleEditArticle}
+                publishing={publishing}
+                publishedId={publishedId}
+              />
             </div>
           </div>
+        )}
+
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDismiss={() => setToast(null)}
+          />
         )}
       </main>
     </AuthGate>

@@ -56,3 +56,33 @@ body {
     linear-gradient(to bottom, rgb(239 246 255 / 0.35) 0%, transparent 6%),
     linear-gradient(to top, rgb(239 246 255 / 0.25) 0%, transparent 5%);
 }
+
+.home-hero,
+.predict-hero {
+  background-color: #0f172a;
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgb(15 23 42 / 0.78) 0%,
+      rgb(15 23 42 / 0.84) 45%,
+      rgb(15 23 42 / 0.92) 100%
+    ),
+    radial-gradient(
+      ellipse 80% 60% at 20% 40%,
+      rgb(37 99 235 / 0.35) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 80% 30%,
+      rgb(99 102 241 / 0.25) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 50% 80%,
+      rgb(14 165 233 / 0.15) 0%,
+      transparent 45%
+    ),
+    url("/hero-nlp.jpg");
+  background-size: cover;
+  background-position: center;
+}

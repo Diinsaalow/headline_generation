@@ -1,4 +1,4 @@
-import Link from "next/link";
+import HomeHero from "@/components/home/HomeHero";
 
 const features = [
   {
@@ -47,44 +47,7 @@ const steps = [
 export default function Home() {
   return (
     <main className="flex-1">
-      <section
-        id="hero"
-        className="hero-edge-gradient flex min-h-[calc(100dvh-4rem)] items-center border-b border-slate-200"
-      >
-        <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-6 py-16 text-center">
-          <p className="mb-4 text-sm font-medium uppercase tracking-wide text-blue-600">
-            Somali NLP
-          </p>
-          <h1 className="mb-6 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-            Generate, save, and revisit Somali news headlines
-          </h1>
-          <p className="mb-10 max-w-xl text-lg leading-relaxed text-slate-600">
-            A lightweight tool powered by a fine-tuned mT5 model. Paste an
-            article, get a headline plus category, and keep each result in your
-            personal history.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/news"
-              className="rounded-md border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-            >
-              Browse headlines
-            </Link>
-            <Link
-              href="/predict"
-              className="rounded-md border border-blue-600 bg-blue-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:border-blue-700 hover:bg-blue-700"
-            >
-              Generate a headline
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-md border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
-            >
-              Create an account
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HomeHero />
 
       <section
         id="how-it-works"

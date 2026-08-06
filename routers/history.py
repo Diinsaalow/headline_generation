@@ -13,6 +13,7 @@ from schemas.history import (
     HistoryStatus,
     SortOrder,
 )
+from schemas.news import PublishNewsRequest, PublishNewsResponse
 from services.history_service import (
     create_history_entry,
     delete_history_item_for_user,
@@ -20,6 +21,7 @@ from services.history_service import (
     get_history_item_for_user,
     list_history_for_user,
     MAX_PAGE_SIZE,
+    publish_news_entry,
 )
 
 router = APIRouter(prefix="/history", tags=["history"])
@@ -69,6 +71,31 @@ def create_history(
         entry_status=payload.status,
         error_message=payload.error_message,
     )
+
+
+@router.post("/publish", response_model=PublishNewsResponse, status_code=201)
+def publish_history_to_news(
+    payload: PublishNewsRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    item = publish_news_entry(
+        user_id=current_user["id"],
+        article=payload.article,
+        headline=payload.headline,
+        category=payload.category,
+        model_used=payload.model_used,
+        generation_time_seconds=payload.generation_time_seconds,
+    )
+    return {
+        "id": item["id"],
+        "headline": item["headline"],
+        "category": item["category"],
+        "article": item["article"],
+        "model_used": item["model_used"],
+        "generation_time_seconds": item["generation_time_seconds"],
+        "published_at": item["published_at"],
+        "created_at": item["created_at"],
+    }
 
 
 @router.get("/{history_id}", response_model=HistoryItem)

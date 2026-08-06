@@ -66,3 +66,26 @@ def test_delete_history_item(client, auth_headers, test_user):
 
     get_response = client.get(f"/history/{item['id']}", headers=auth_headers)
     assert get_response.status_code == 404
+
+
+def test_publish_history_to_news(client, auth_headers, test_user):
+    response = client.post(
+        "/history/publish",
+        headers=auth_headers,
+        json={
+            "article": "A newly published Somali news article with enough content.",
+            "headline": "Published headline",
+            "category": "politics",
+            "model_used": "model-a",
+            "generation_time_seconds": 1.25,
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["headline"] == "Published headline"
+    assert payload["published_at"] is not None
+
+    news_response = client.get("/news")
+    assert news_response.status_code == 200
+    assert any(item["headline"] == "Published headline" for item in news_response.json()["items"])

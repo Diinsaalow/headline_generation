@@ -14,6 +14,14 @@ function formatDate(dateString: string) {
   }).format(new Date(dateString));
 }
 
+function formatGenerationTime(seconds: number | null) {
+  if (seconds === null || seconds === undefined) {
+    return "Not recorded";
+  }
+
+  return `${seconds.toFixed(2)} seconds`;
+}
+
 export default function NewsDetailPage() {
   const params = useParams<{ id: string }>();
   const [item, setItem] = useState<PublicNewsDetail | null>(null);
@@ -56,6 +64,8 @@ export default function NewsDetailPage() {
     return () => controller.abort();
   }, [params.id]);
 
+  const displayDate = item?.published_at ?? item?.created_at;
+
   return (
     <main className="flex-1 bg-slate-50/60">
       <div className="mx-auto max-w-3xl px-6 py-16">
@@ -89,12 +99,14 @@ export default function NewsDetailPage() {
         ) : (
           <article className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
             <div className="mb-6 flex flex-wrap items-center gap-3">
-              <time
-                dateTime={item.created_at}
-                className="text-sm text-slate-500"
-              >
-                {formatDate(item.created_at)}
-              </time>
+              {displayDate && (
+                <time
+                  dateTime={displayDate}
+                  className="text-sm text-slate-500"
+                >
+                  Published {formatDate(displayDate)}
+                </time>
+              )}
               <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium capitalize text-blue-700">
                 {item.category}
               </span>
@@ -103,6 +115,25 @@ export default function NewsDetailPage() {
             <h1 className="mb-8 text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
               {item.headline}
             </h1>
+
+            <div className="mb-8 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Model used
+                </p>
+                <p className="text-sm font-medium text-slate-900">
+                  {item.model_used || "Unknown"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Generation time
+                </p>
+                <p className="text-sm font-medium text-slate-900">
+                  {formatGenerationTime(item.generation_time_seconds)}
+                </p>
+              </div>
+            </div>
 
             <div className="border-t border-slate-200 pt-8">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">

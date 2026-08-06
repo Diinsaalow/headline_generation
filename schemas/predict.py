@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -16,13 +15,12 @@ class ArticleRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    history_id: str
     headline: str
     category: str
     model_used: str
     status: Literal["success", "failed"] = "success"
     error_message: str | None = None
-    created_at: datetime
+    generation_time_seconds: float
 
 
 class ModelInfo(ModelInputLimits):
