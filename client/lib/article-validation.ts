@@ -3,7 +3,7 @@ const NON_LATIN_SCRIPT_PATTERN =
   /[\u0400-\u04FF\u0370-\u03FF\u0590-\u05FF\u0900-\u097F\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]/;
 const MATH_PATTERN =
   /(\d+\s*[+\-*/^=]\s*\d+)|(\$\$)|(\\frac\b)|(\bintegral\b)|(\bsqrt\b)/i;
-const WORD_PATTERN = /[A-Za-z\u00C0-\u024F']+/gu;
+export const WORD_PATTERN = /[A-Za-z\u00C0-\u024F']+/gu;
 
 const ENGLISH_STOP_WORDS = new Set([
   "the", "and", "is", "are", "was", "were", "have", "has", "had", "this", "that",

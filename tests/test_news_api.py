@@ -68,9 +68,32 @@ def test_get_public_news_detail(client, auth_headers, test_user):
     payload = response.json()
     assert payload["headline"] == success_item["headline"]
     assert payload["article"] == success_item["article"]
-    assert payload["model_used"] == success_item["model_used"]
-    assert payload["generation_time_seconds"] == success_item["generation_time_seconds"]
+    assert "model_used" not in payload
+    assert "generation_time_seconds" not in payload
     assert "error_message" not in payload
+
+
+def test_public_news_detail_omits_internal_fields(client, auth_headers, test_user):
+    publish_response = client.post(
+        "/news/publish",
+        headers=auth_headers,
+        json={
+            "article": "A Somali news article with sufficient body content.",
+            "headline": "Detail headline",
+            "category": "politics",
+            "model_used": "model-a",
+            "generation_time_seconds": 3.14,
+        },
+    )
+    assert publish_response.status_code == 201
+    news_id = publish_response.json()["id"]
+
+    detail_response = client.get(f"/news/{news_id}")
+
+    assert detail_response.status_code == 200
+    payload = detail_response.json()
+    assert "model_used" not in payload
+    assert "generation_time_seconds" not in payload
 
 
 def test_public_news_includes_legacy_records_without_status(

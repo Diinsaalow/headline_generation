@@ -1,5 +1,7 @@
 "use client";
 
+import { formatGenerationTime } from "@/lib/text-format";
+
 type GenerationTimerProps = {
   loading: boolean;
   elapsedSeconds: number | null;
@@ -33,7 +35,7 @@ export default function GenerationTimer({
           <span>Generating... {displaySeconds.toFixed(2)}s</span>
         </>
       ) : (
-        <span>Generated in {displaySeconds.toFixed(2)} seconds</span>
+        <span>Generated in {formatGenerationTime(displaySeconds)}</span>
       )}
     </div>
   );

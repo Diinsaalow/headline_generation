@@ -14,14 +14,6 @@ function formatDate(dateString: string) {
   }).format(new Date(dateString));
 }
 
-function formatGenerationTime(seconds: number | null) {
-  if (seconds === null || seconds === undefined) {
-    return "Not recorded";
-  }
-
-  return `${seconds.toFixed(2)} seconds`;
-}
-
 export default function NewsDetailPage() {
   const params = useParams<{ id: string }>();
   const [item, setItem] = useState<PublicNewsDetail | null>(null);
@@ -115,25 +107,6 @@ export default function NewsDetailPage() {
             <h1 className="mb-8 text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
               {item.headline}
             </h1>
-
-            <div className="mb-8 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 p-4">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Model used
-                </p>
-                <p className="text-sm font-medium text-slate-900">
-                  {item.model_used || "Unknown"}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Generation time
-                </p>
-                <p className="text-sm font-medium text-slate-900">
-                  {formatGenerationTime(item.generation_time_seconds)}
-                </p>
-              </div>
-            </div>
 
             <div className="border-t border-slate-200 pt-8">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">

@@ -53,6 +53,22 @@ function StatusBadge({ status }: { status: HistoryStatus }) {
   );
 }
 
+function VisibilityBadge({ publishedAt }: { publishedAt: string | null }) {
+  const isPublished = Boolean(publishedAt);
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${
+        isPublished
+          ? "border-blue-200 bg-blue-50 text-blue-700"
+          : "border-slate-200 bg-slate-50 text-slate-600"
+      }`}
+    >
+      {isPublished ? "Published" : "Saved"}
+    </span>
+  );
+}
+
 export default function HistoryPage() {
   const { token } = useAuth();
   const [items, setItems] = useState<HistoryItem[]>([]);
@@ -418,7 +434,7 @@ export default function HistoryPage() {
               <p className="mx-auto max-w-xl text-sm leading-relaxed text-slate-600">
                 {hasActiveFilters
                   ? "Try adjusting your search or filters to find processed articles."
-                  : "Generate a headline from the prediction page and it will appear here automatically."}
+                  : "Save Database or Publish a generated headline and it will appear here."}
               </p>
             </div>
           ) : (
@@ -494,7 +510,10 @@ export default function HistoryPage() {
                             {item.model_used}
                           </td>
                           <td className="px-4 py-4">
-                            <StatusBadge status={item.status} />
+                            <div className="flex flex-wrap gap-2">
+                              <StatusBadge status={item.status} />
+                              <VisibilityBadge publishedAt={item.published_at} />
+                            </div>
                           </td>
                           <td className="whitespace-nowrap px-4 py-4 text-right">
                             <div className="inline-flex gap-2">
@@ -531,7 +550,10 @@ export default function HistoryPage() {
                       <p className="text-xs font-medium uppercase tracking-wide text-blue-600">
                         {formatDate(item.created_at)}
                       </p>
-                      <StatusBadge status={item.status} />
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge status={item.status} />
+                        <VisibilityBadge publishedAt={item.published_at} />
+                      </div>
                     </div>
 
                     <h2 className="mb-2 text-lg font-semibold text-slate-900">

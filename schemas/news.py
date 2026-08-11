@@ -16,8 +16,6 @@ class PublicNewsSummary(BaseModel):
 
 class PublicNewsDetail(PublicNewsSummary):
     article: str
-    model_used: str
-    generation_time_seconds: float | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

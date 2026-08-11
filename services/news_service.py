@@ -52,8 +52,6 @@ def serialize_public_news_detail(document: dict) -> dict:
     return {
         **serialize_public_news_summary(document),
         "article": document["article"],
-        "model_used": document.get("model_used", ""),
-        "generation_time_seconds": document.get("generation_time_seconds"),
     }
 
 

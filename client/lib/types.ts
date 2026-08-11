@@ -77,6 +77,8 @@ export type HistoryItem = {
   status: HistoryStatus;
   error_message: string | null;
   created_at: string;
+  published_at: string | null;
+  generation_time_seconds: number | null;
 };
 
 export type HistoryListResponse = {
@@ -124,8 +126,6 @@ export type PublicNewsSummary = {
 
 export type PublicNewsDetail = PublicNewsSummary & {
   article: string;
-  model_used: string;
-  generation_time_seconds: number | null;
 };
 
 export type PublicNewsListResponse = {

@@ -106,6 +106,38 @@ def create_history_entry(
     return serialize_history(history_document)
 
 
+def publish_existing_history_entry(
+    user_id: str,
+    history_id: str,
+    headline: str,
+) -> dict:
+    user_object_id = require_object_id(user_id, "User account was not found.")
+    history_object_id = require_object_id(history_id, "History item not found.")
+
+    history_document = get_history_collection().find_one(
+        {"_id": history_object_id, "user_id": user_object_id}
+    )
+    if history_document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="History item not found.",
+        )
+
+    published_at = history_document.get("published_at")
+    if isinstance(published_at, datetime):
+        return serialize_history(history_document)
+
+    cleaned_headline = require_text(headline, "Generated headline")
+    now = datetime.now(timezone.utc)
+    get_history_collection().update_one(
+        {"_id": history_object_id, "user_id": user_object_id},
+        {"$set": {"headline": cleaned_headline, "published_at": now}},
+    )
+    history_document["headline"] = cleaned_headline
+    history_document["published_at"] = now
+    return serialize_history(history_document)
+
+
 def publish_news_entry(
     user_id: str,
     article: str,

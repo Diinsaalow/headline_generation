@@ -2,40 +2,45 @@
 
 import Link from "next/link";
 
+import { countWords, formatGenerationTime } from "@/lib/text-format";
 import type { GeneratedDraft } from "@/lib/types";
-
-function formatGenerationTime(seconds: number | undefined | null) {
-  if (seconds == null || Number.isNaN(seconds)) {
-    return "Not recorded";
-  }
-
-  return `${seconds.toFixed(2)} seconds`;
-}
 
 type GeneratedResultPanelProps = {
   draft: GeneratedDraft;
   modelName: string;
+  onHeadlineChange: (headline: string) => void;
+  onSave: () => Promise<void>;
   onPublish: () => Promise<void>;
   onEdit: () => void;
+  saving: boolean;
   publishing: boolean;
+  savedId: string | null;
   publishedId: string | null;
 };
 
 export default function GeneratedResultPanel({
   draft,
   modelName,
+  onHeadlineChange,
+  onSave,
   onPublish,
   onEdit,
+  saving,
   publishing,
+  savedId,
   publishedId,
 }: GeneratedResultPanelProps) {
-  const canPublish =
+  const inFlight = saving || publishing;
+  const hasHeadline = draft.headline.trim().length > 0;
+  const hasRequiredFields =
     draft.article.trim().length > 0 &&
-    draft.headline.trim().length > 0 &&
+    hasHeadline &&
     draft.category.trim().length > 0 &&
-    draft.model_used.trim().length > 0 &&
-    !publishing &&
-    !publishedId;
+    draft.model_used.trim().length > 0;
+  const canSave = hasRequiredFields && !inFlight && !savedId && !publishedId;
+  const canPublish = hasRequiredFields && !inFlight && !publishedId;
+  const headlineWordCount = countWords(draft.headline);
+  const headlineCharCount = draft.headline.length;
 
   return (
     <div className="space-y-5 p-6">
@@ -43,7 +48,7 @@ export default function GeneratedResultPanel({
         <button
           type="button"
           onClick={onEdit}
-          disabled={publishing}
+          disabled={inFlight}
           className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Edit Article
@@ -51,11 +56,30 @@ export default function GeneratedResultPanel({
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <label
+          htmlFor="generated-headline"
+          className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500"
+        >
           Headline
-        </p>
-        <p className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-base font-medium leading-relaxed text-slate-900">
-          {draft.headline || "No headline generated."}
+        </label>
+        <textarea
+          id="generated-headline"
+          rows={4}
+          value={draft.headline}
+          onChange={(event) => onHeadlineChange(event.target.value)}
+          disabled={inFlight}
+          placeholder="Edit the generated headline..."
+          className="w-full resize-y rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-base font-medium leading-relaxed text-slate-900 outline-none transition-colors placeholder:font-normal placeholder:text-slate-400 focus:border-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+          <span>
+            {headlineCharCount.toLocaleString()}{" "}
+            {headlineCharCount === 1 ? "character" : "characters"}
+          </span>
+          <span>
+            {headlineWordCount.toLocaleString()}{" "}
+            {headlineWordCount === 1 ? "word" : "words"}
+          </span>
         </p>
       </div>
 
@@ -100,10 +124,25 @@ export default function GeneratedResultPanel({
 
       <div className="border-t border-slate-200 pt-5">
         <p className="mb-4 text-xs text-slate-500">
-          This preview is not published yet. Click Publish to News when you are
-          ready for it to appear on the news page.
+          This preview is not public yet. Use Save Database to keep it in
+          history, or Publish to make it appear on the news page.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            {saving && (
+              <span
+                aria-hidden="true"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600"
+              />
+            )}
+            {saving ? "Saving..." : "Save Database"}
+          </button>
+
           <button
             type="button"
             onClick={onPublish}
@@ -116,8 +155,17 @@ export default function GeneratedResultPanel({
                 className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
               />
             )}
-            {publishing ? "Publishing..." : "Publish to News"}
+            {publishing ? "Publishing..." : "Publish"}
           </button>
+
+          {savedId && !publishedId && (
+            <Link
+              href={`/history/${savedId}`}
+              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-blue-600 transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              View saved article
+            </Link>
+          )}
 
           {publishedId && (
             <Link

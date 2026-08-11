@@ -11,6 +11,7 @@ from schemas.history import (
     HistoryListResponse,
     HistorySortField,
     HistoryStatus,
+    PublishExistingHistoryRequest,
     SortOrder,
 )
 from schemas.news import PublishNewsRequest, PublishNewsResponse
@@ -21,6 +22,7 @@ from services.history_service import (
     get_history_item_for_user,
     list_history_for_user,
     MAX_PAGE_SIZE,
+    publish_existing_history_entry,
     publish_news_entry,
 )
 
@@ -70,7 +72,22 @@ def create_history(
         model_used=payload.model_used,
         entry_status=payload.status,
         error_message=payload.error_message,
+        generation_time_seconds=payload.generation_time_seconds,
     )
+
+
+def _publish_news_response(item: dict) -> dict:
+    generation_time = item.get("generation_time_seconds")
+    return {
+        "id": item["id"],
+        "headline": item["headline"],
+        "category": item["category"],
+        "article": item["article"],
+        "model_used": item["model_used"],
+        "generation_time_seconds": 0 if generation_time is None else generation_time,
+        "published_at": item["published_at"],
+        "created_at": item["created_at"],
+    }
 
 
 @router.post("/publish", response_model=PublishNewsResponse, status_code=201)
@@ -86,16 +103,21 @@ def publish_history_to_news(
         model_used=payload.model_used,
         generation_time_seconds=payload.generation_time_seconds,
     )
-    return {
-        "id": item["id"],
-        "headline": item["headline"],
-        "category": item["category"],
-        "article": item["article"],
-        "model_used": item["model_used"],
-        "generation_time_seconds": item["generation_time_seconds"],
-        "published_at": item["published_at"],
-        "created_at": item["created_at"],
-    }
+    return _publish_news_response(item)
+
+
+@router.post("/{history_id}/publish", response_model=PublishNewsResponse)
+def publish_saved_history(
+    history_id: str,
+    payload: PublishExistingHistoryRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    item = publish_existing_history_entry(
+        user_id=current_user["id"],
+        history_id=history_id,
+        headline=payload.headline,
+    )
+    return _publish_news_response(item)
 
 
 @router.get("/{history_id}", response_model=HistoryItem)

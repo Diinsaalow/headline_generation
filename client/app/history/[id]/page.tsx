@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api";
+import { formatGenerationTime } from "@/lib/text-format";
 import type { HistoryItem } from "@/lib/types";
 
 function formatDate(dateString: string) {
@@ -149,6 +150,15 @@ export default function HistoryDetailPage() {
                     {item.model_used}
                   </span>
                   <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${
+                      item.published_at
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    {item.published_at ? "Published" : "Saved"}
+                  </span>
+                  <span
                     className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium capitalize ${
                       item.status === "success"
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -157,6 +167,25 @@ export default function HistoryDetailPage() {
                   >
                     {item.status}
                   </span>
+                </div>
+              </div>
+
+              <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Model used
+                  </p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {item.model_used || "Unknown"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Generation time
+                  </p>
+                  <p className="text-sm font-medium tabular-nums text-slate-900">
+                    {formatGenerationTime(item.generation_time_seconds)}
+                  </p>
                 </div>
               </div>
 

@@ -16,6 +16,11 @@ class HistoryCreateRequest(BaseModel):
     model_used: str = Field(min_length=1)
     status: HistoryStatus = "success"
     error_message: str | None = None
+    generation_time_seconds: float | None = Field(default=None, ge=0)
+
+
+class PublishExistingHistoryRequest(BaseModel):
+    headline: str = Field(min_length=1)
 
 
 class HistoryItem(BaseModel):
@@ -27,6 +32,8 @@ class HistoryItem(BaseModel):
     status: HistoryStatus = "success"
     error_message: str | None = None
     created_at: datetime
+    published_at: datetime | None = None
+    generation_time_seconds: float | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

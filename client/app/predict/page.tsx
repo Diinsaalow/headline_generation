@@ -20,8 +20,10 @@ import {
   validateSomaliArticle,
 } from "@/lib/article-validation";
 import { apiFetch } from "@/lib/api";
+import { countWords, formatGeneratedHeadline } from "@/lib/text-format";
 import type {
   GeneratedDraft,
+  HistoryItem,
   ModelInfo,
   ModelsResponse,
   PredictionResult,
@@ -45,7 +47,9 @@ export default function PredictPage() {
   const [draft, setDraft] = useState<GeneratedDraft | null>(null);
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{
@@ -159,7 +163,7 @@ export default function PredictPage() {
     closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !publishing) {
+      if (event.key === "Escape" && !saving && !publishing) {
         setResultModalOpen(false);
       }
     }
@@ -171,7 +175,7 @@ export default function PredictPage() {
       document.removeEventListener("keydown", handleKeyDown);
       submitButton?.focus();
     };
-  }, [resultModalOpen, publishing]);
+  }, [resultModalOpen, saving, publishing]);
 
   function clearTimer() {
     if (timerRef.current !== null) {
@@ -191,6 +195,7 @@ export default function PredictPage() {
 
     if (articleChanged || modelChanged) {
       setDraft(null);
+      setSavedId(null);
       setPublishedId(null);
       setResultModalOpen(false);
       setFinalSeconds(null);
@@ -224,9 +229,14 @@ export default function PredictPage() {
     }, 0);
   }
 
+  function handleHeadlineChange(headline: string) {
+    setDraft((current) => (current ? { ...current, headline } : current));
+  }
+
   function handleClearArticle() {
     setArticle("");
     setDraft(null);
+    setSavedId(null);
     setPublishedId(null);
     setResultModalOpen(false);
     setValidationMessage(null);
@@ -257,6 +267,7 @@ export default function PredictPage() {
     setValidationMessage(null);
     setDraft(null);
     setResultModalOpen(false);
+    setSavedId(null);
     setPublishedId(null);
     setFinalSeconds(null);
     setElapsedSeconds(0);
@@ -289,7 +300,7 @@ export default function PredictPage() {
       if (data.status === "success" && data.headline) {
         setDraft({
           article: trimmedArticle,
-          headline: data.headline,
+          headline: formatGeneratedHeadline(data.headline),
           category: data.category,
           model_used: data.model_used,
           generation_time_seconds:
@@ -315,16 +326,20 @@ export default function PredictPage() {
     }
   }
 
-  async function handlePublish() {
-    if (!draft || !token || publishing) {
+  async function handleSave() {
+    if (!draft || !token || saving || publishing || savedId || publishedId) {
       return;
     }
 
-    setPublishing(true);
+    if (!draft.headline.trim()) {
+      return;
+    }
+
+    setSaving(true);
     setToast(null);
 
     try {
-      const response = await apiFetch<PublishNewsResponse>("/history/publish", {
+      const response = await apiFetch<HistoryItem>("/history", {
         method: "POST",
         token,
         body: {
@@ -336,7 +351,62 @@ export default function PredictPage() {
         },
       });
 
+      setSavedId(response.id);
+      setToast({
+        message: "Article saved to history",
+        type: "success",
+      });
+    } catch (saveError) {
+      setToast({
+        message:
+          saveError instanceof Error
+            ? saveError.message
+            : "Could not save the article.",
+        type: "error",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handlePublish() {
+    if (!draft || !token || saving || publishing || publishedId) {
+      return;
+    }
+
+    if (!draft.headline.trim()) {
+      return;
+    }
+
+    setPublishing(true);
+    setToast(null);
+
+    try {
+      const response = savedId
+        ? await apiFetch<PublishNewsResponse>(
+            `/history/${savedId}/publish`,
+            {
+              method: "POST",
+              token,
+              body: {
+                headline: draft.headline,
+              },
+            },
+          )
+        : await apiFetch<PublishNewsResponse>("/history/publish", {
+            method: "POST",
+            token,
+            body: {
+              article: draft.article,
+              headline: draft.headline,
+              category: draft.category,
+              model_used: draft.model_used,
+              generation_time_seconds: draft.generation_time_seconds ?? 0,
+            },
+          });
+
       setPublishedId(response.id);
+      setSavedId(response.id);
       setToast({
         message: "Article published successfully",
         type: "success",
@@ -400,9 +470,12 @@ export default function PredictPage() {
                 >
                   Article text
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className={`text-xs ${counterClassName}`}>
                     {characterCount.label}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {countWords(article).toLocaleString()} words
                   </span>
                   <button
                     type="button"
@@ -507,7 +580,7 @@ export default function PredictPage() {
               type="button"
               aria-label="Close result"
               onClick={() => setResultModalOpen(false)}
-              disabled={publishing}
+              disabled={saving || publishing}
               className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-[2px] disabled:cursor-not-allowed"
             />
 
@@ -528,7 +601,7 @@ export default function PredictPage() {
                   ref={closeButtonRef}
                   type="button"
                   onClick={() => setResultModalOpen(false)}
-                  disabled={publishing}
+                  disabled={saving || publishing}
                   aria-label="Close result"
                   className="rounded-md border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -546,9 +619,13 @@ export default function PredictPage() {
               <GeneratedResultPanel
                 draft={draft}
                 modelName={resultModelName}
+                onHeadlineChange={handleHeadlineChange}
+                onSave={handleSave}
                 onPublish={handlePublish}
                 onEdit={handleEditArticle}
+                saving={saving}
                 publishing={publishing}
+                savedId={savedId}
                 publishedId={publishedId}
               />
             </div>
