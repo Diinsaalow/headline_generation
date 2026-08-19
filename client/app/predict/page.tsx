@@ -12,7 +12,9 @@ import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import GeneratedResultPanel from "@/components/predict/GeneratedResultPanel";
 import GenerationTimer from "@/components/predict/GenerationTimer";
-import ModelSelect from "@/components/predict/ModelSelect";
+import ModelSelect, {
+  pickDefaultModelId,
+} from "@/components/predict/ModelSelect";
 import PredictHero from "@/components/predict/PredictHero";
 import Toast from "@/components/ui/Toast";
 import {
@@ -113,10 +115,7 @@ export default function PredictPage() {
           minWords: data.min_article_words ?? DEFAULT_MIN_WORDS,
         });
         setSelectedModel(
-          data.default_model &&
-            availableModels.some((model) => model.id === data.default_model)
-            ? data.default_model
-            : (availableModels[0]?.id ?? ""),
+          pickDefaultModelId(availableModels, data.default_model),
         );
 
         if (availableModels.length === 0) {

@@ -13,6 +13,7 @@ export type AuthResponse = {
 export type ModelInfo = {
   id: string;
   name: string;
+  recommended?: boolean;
   max_input_tokens: number;
   max_article_characters: number;
   min_article_words: number;
