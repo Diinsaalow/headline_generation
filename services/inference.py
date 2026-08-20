@@ -5,6 +5,8 @@ import torch
 from fastapi import HTTPException, status
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
+from services.categories import normalize_category
+
 MODELS_DIR = Path("models")
 MAX_INPUT_LENGTH = 512
 MAX_TARGET_LENGTH = 96
@@ -102,8 +104,8 @@ def parse_generated_output(text: str) -> tuple[str, str]:
     match = re.search(
         r"category\s*:\s*([a-zA-Z_]+)", category_part, flags=re.IGNORECASE
     )
-    category = match.group(1).strip().lower() if match else "unknown"
-    return headline, category
+    category = match.group(1).strip().lower() if match else ""
+    return headline, normalize_category(category)
 
 
 def run_inference(article_body: str, model_id: str | None) -> dict:
@@ -142,7 +144,7 @@ def run_inference(article_body: str, model_id: str | None) -> dict:
 
     return {
         "headline": headline or "No headline generated.",
-        "category": category or "unknown",
+        "category": normalize_category(category),
         "model_used": resolved_model_id,
     }
 

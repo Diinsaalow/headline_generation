@@ -5,7 +5,7 @@ def test_create_history_entry_success(mock_db, test_user):
     item = seed_history(test_user["id"], count=1)[0]
 
     assert item["headline"] == "Generated headline 0"
-    assert item["category"] == "politics"
+    assert item["category"] == "siyaasad"
     assert item["model_used"] == "model-a"
     assert item["status"] == "success"
     assert item["error_message"] is None
@@ -59,10 +59,17 @@ def test_list_history_search_and_filters(mock_db, test_user):
 
     category_result = list_history_for_user(
         test_user["id"],
-        category="politics",
+        category="siyaasad",
     )
     assert category_result["total"] >= 1
-    assert all(item["category"] == "politics" for item in category_result["items"])
+    assert all(item["category"] == "siyaasad" for item in category_result["items"])
+
+    alias_result = list_history_for_user(
+        test_user["id"],
+        category="politics",
+    )
+    assert alias_result["total"] >= 1
+    assert all(item["category"] == "siyaasad" for item in alias_result["items"])
 
     status_result = list_history_for_user(
         test_user["id"],

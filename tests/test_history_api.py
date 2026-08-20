@@ -44,7 +44,7 @@ def test_history_filters_endpoint(client, auth_headers, test_user):
 
     assert response.status_code == 200
     payload = response.json()
-    assert "politics" in payload["categories"]
+    assert payload["categories"] == ["amni", "ciyaaro", "siyaasad", "caalamka"]
     assert "model-a" in payload["models"]
     assert payload["statuses"] == ["success", "failed"]
 
@@ -100,6 +100,7 @@ def test_publish_history_to_news(client, auth_headers, test_user):
     assert response.status_code == 201
     payload = response.json()
     assert payload["headline"] == "Published headline"
+    assert payload["category"] == "siyaasad"
     assert payload["published_at"] is not None
 
     news_response = client.get("/news")

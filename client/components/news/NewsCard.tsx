@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { PublicNewsSummary } from "@/lib/types";
+import { getCategoryLabel } from "@/lib/categories";
 
 type NewsCardProps = {
   item: PublicNewsSummary;
@@ -19,8 +20,8 @@ export default function NewsCard({ item }: NewsCardProps) {
   return (
     <article className="group flex h-full flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-slate-300 hover:shadow-md">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium capitalize text-blue-700">
-          {item.category}
+        <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+          {getCategoryLabel(item.category)}
         </span>
         <time dateTime={displayDate} className="text-xs text-slate-500">
           {formatDate(displayDate)}

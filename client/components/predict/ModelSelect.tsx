@@ -19,9 +19,6 @@ export default function ModelSelect({
   loading = false,
   error = null,
 }: ModelSelectProps) {
-  const selectedModelInfo =
-    models.find((model) => model.id === selectedModel) ?? null;
-
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-4">
@@ -72,15 +69,6 @@ export default function ModelSelect({
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-
-      {selectedModelInfo && (
-        <p className="mt-2 text-xs text-slate-500">
-          This model accepts up to{" "}
-          {selectedModelInfo.max_article_characters.toLocaleString()} characters
-          ({selectedModelInfo.max_input_tokens} tokens, min{" "}
-          {selectedModelInfo.min_article_words} words).
-        </p>
-      )}
     </div>
   );
 }

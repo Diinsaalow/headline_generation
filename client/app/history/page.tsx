@@ -11,6 +11,7 @@ import {
 import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api";
+import { getCategoryLabel, getNewsCategories } from "@/lib/categories";
 import type {
   HistoryFiltersResponse,
   HistoryItem,
@@ -331,9 +332,9 @@ export default function HistoryPage() {
                   className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-blue-600 disabled:bg-slate-50"
                 >
                   <option value="">All categories</option>
-                  {filters.categories.map((category) => (
+                  {getNewsCategories().map((category) => (
                     <option key={category} value={category}>
-                      {category}
+                      {getCategoryLabel(category)}
                     </option>
                   ))}
                 </select>
@@ -502,8 +503,8 @@ export default function HistoryPage() {
                             </p>
                           </td>
                           <td className="px-4 py-4">
-                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium capitalize text-blue-700">
-                              {item.category}
+                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                              {getCategoryLabel(item.category)}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-slate-600">
@@ -561,8 +562,8 @@ export default function HistoryPage() {
                     </h2>
 
                     <div className="mb-3 flex flex-wrap gap-2">
-                      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium capitalize text-blue-700">
-                        {item.category}
+                      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                        {getCategoryLabel(item.category)}
                       </span>
                       <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
                         {item.model_used}

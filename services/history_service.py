@@ -7,6 +7,11 @@ from fastapi import HTTPException, status
 from pymongo import ASCENDING, DESCENDING
 
 from db.mongodb import get_collection
+from services.categories import (
+    get_category_query_values,
+    get_system_news_categories,
+    normalize_category,
+)
 
 VALID_STATUSES = {"success", "failed"}
 VALID_SORT_FIELDS = {"created_at", "headline", "category", "model_used", "status"}
@@ -24,7 +29,7 @@ def serialize_history(document: dict) -> dict:
         "id": str(document["_id"]),
         "article": document["article"],
         "headline": document.get("headline", ""),
-        "category": document.get("category", "unknown"),
+        "category": normalize_category(document.get("category")),
         "model_used": document.get("model_used", ""),
         "status": document.get("status", "success"),
         "error_message": document.get("error_message"),
@@ -75,10 +80,10 @@ def create_history_entry(
 
     if entry_status == "success":
         cleaned_headline = require_text(headline, "Generated headline")
-        cleaned_category = require_text(category, "Category").lower()
+        cleaned_category = normalize_category(require_text(category, "Category"))
     else:
         cleaned_headline = headline.strip()
-        cleaned_category = category.strip().lower() or "unknown"
+        cleaned_category = normalize_category(category)
 
     history_document = {
         "user_id": require_object_id(user_id, "User account was not found."),
@@ -177,8 +182,9 @@ def _build_history_query(
                 {"headline": {"$regex": escaped, "$options": "i"}},
             ]
 
-    if category:
-        query["category"] = category.strip().lower()
+    category_values = get_category_query_values(category)
+    if category_values:
+        query["category"] = {"$in": category_values}
 
     if model_used:
         query["model_used"] = model_used.strip()
@@ -277,11 +283,7 @@ def get_history_filter_options(user_id: str) -> dict:
     collection = get_history_collection()
     base_query = {"user_id": user_object_id}
 
-    categories = sorted(
-        value
-        for value in collection.distinct("category", base_query)
-        if isinstance(value, str) and value.strip()
-    )
+    categories = get_system_news_categories()
     models = sorted(
         value
         for value in collection.distinct("model_used", base_query)

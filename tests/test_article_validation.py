@@ -47,7 +47,31 @@ def test_validate_somali_article_rejects_math():
     assert result["valid"] is False
 
 
-def test_validate_somali_article_enforces_character_limit():
-    result = validate_somali_article("waa " * 400, max_characters=100)
+def test_validate_somali_article_accepts_long_somali_text():
+    result = validate_somali_article("waa " * 400)
+    assert result["valid"] is True
+
+
+def test_validate_somali_article_rejects_amharic_script():
+    result = validate_somali_article(
+        "የኢትዮጵያ መንግስት ዛሬ በአዲስ አበባ ስብሰባ እንደሚያካሂድ አስታወቀ ለህዝቡ ዝርዝር መግለጫ ሰጥቷል።"
+    )
     assert result["valid"] is False
-    assert "too long" in result["message"]
+    assert "Latin" in result["message"]
+
+
+def test_validate_somali_article_rejects_amharic_mixed_with_latin():
+    result = validate_somali_article(
+        "የኢትዮጵያ መንግስት Addis Ababa meeting tomorrow security development "
+        "plans officials country report according government people year."
+    )
+    assert result["valid"] is False
+
+
+def test_validate_somali_article_rejects_latin_text_without_somali_markers():
+    result = validate_somali_article(
+        "Questa e una lunga notizia scritta in un altra lingua latina "
+        "senza parole somale riconoscibili nel testo proposto oggi."
+    )
+    assert result["valid"] is False
+    assert "Somali" in result["message"]

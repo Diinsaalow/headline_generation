@@ -1,6 +1,5 @@
 const ARABIC_SCRIPT_PATTERN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
-const NON_LATIN_SCRIPT_PATTERN =
-  /[\u0400-\u04FF\u0370-\u03FF\u0590-\u05FF\u0900-\u097F\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]/;
+const NON_LATIN_LETTER_PATTERN = /[^\P{L}\p{Script=Latin}]/u;
 const MATH_PATTERN =
   /(\d+\s*[+\-*/^=]\s*\d+)|(\$\$)|(\\frac\b)|(\bintegral\b)|(\bsqrt\b)/i;
 export const WORD_PATTERN = /[A-Za-z\u00C0-\u024F']+/gu;
@@ -33,7 +32,6 @@ export type ArticleValidationResult = {
 };
 
 export type ArticleValidationOptions = {
-  maxCharacters: number;
   minWords?: number;
 };
 
@@ -45,20 +43,13 @@ function wordList(text: string) {
 
 export function validateSomaliArticle(
   text: string,
-  options: ArticleValidationOptions,
+  options: ArticleValidationOptions = {},
 ): ArticleValidationResult {
   const cleaned = text.trim().replace(/\s+/g, " ");
   const minWords = options.minWords ?? 5;
 
   if (!cleaned) {
     return { valid: false, message: "Article text is required." };
-  }
-
-  if (cleaned.length > options.maxCharacters) {
-    return {
-      valid: false,
-      message: `Article is too long. Maximum ${options.maxCharacters.toLocaleString()} characters are allowed for the selected model.`,
-    };
   }
 
   if (ARABIC_SCRIPT_PATTERN.test(cleaned)) {
@@ -69,11 +60,11 @@ export function validateSomaliArticle(
     };
   }
 
-  if (NON_LATIN_SCRIPT_PATTERN.test(cleaned)) {
+  if (NON_LATIN_LETTER_PATTERN.test(cleaned)) {
     return {
       valid: false,
       message:
-        "Only Somali text in Latin letters is accepted. Remove other scripts such as Cyrillic or Chinese characters.",
+        "Only Somali text in Latin letters is accepted. Scripts such as Amharic, Chinese, or Cyrillic are not allowed.",
     };
   }
 
@@ -152,7 +143,7 @@ export function validateSomaliArticle(
     };
   }
 
-  if (somaliHits === 0 && englishRatio >= 0.08) {
+  if (somaliHits === 0) {
     return {
       valid: false,
       message:
@@ -160,39 +151,5 @@ export function validateSomaliArticle(
     };
   }
 
-  if (somaliHits === 0 && meaningfulWords.length < 12) {
-    return {
-      valid: false,
-      message:
-        "The article is too short to verify Somali language. Please paste a longer Somali news article.",
-    };
-  }
-
   return { valid: true, message: null };
-}
-
-export function getCharacterCountState(
-  length: number,
-  maxCharacters: number,
-) {
-  const ratio = length / maxCharacters;
-
-  if (length > maxCharacters) {
-    return {
-      tone: "error" as const,
-      label: `${length.toLocaleString()} / ${maxCharacters.toLocaleString()} characters`,
-    };
-  }
-
-  if (ratio >= 0.9) {
-    return {
-      tone: "warning" as const,
-      label: `${length.toLocaleString()} / ${maxCharacters.toLocaleString()} characters`,
-    };
-  }
-
-  return {
-    tone: "normal" as const,
-    label: `${length.toLocaleString()} / ${maxCharacters.toLocaleString()} characters`,
-  };
 }

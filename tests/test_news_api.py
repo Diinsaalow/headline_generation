@@ -144,6 +144,7 @@ def test_publish_news_creates_visible_article(client, auth_headers, test_user):
     assert response.status_code == 201
     payload = response.json()
     assert payload["headline"] == "Published headline"
+    assert payload["category"] == "siyaasad"
     assert payload["published_at"] is not None
     assert payload["generation_time_seconds"] == 2.43
 
@@ -181,12 +182,17 @@ def test_get_news_categories(client, auth_headers, test_user):
 def test_list_public_news_category_filter(client, auth_headers, test_user):
     seed_history(test_user["id"], count=3)
 
-    response = client.get("/news?category=politics")
+    response = client.get("/news?category=siyaasad")
     payload = response.json()
 
     assert response.status_code == 200
     assert payload["total"] >= 1
-    assert all(item["category"] == "politics" for item in payload["items"])
+    assert all(item["category"] == "siyaasad" for item in payload["items"])
+
+    alias_response = client.get("/news?category=politics")
+    alias_payload = alias_response.json()
+    assert alias_payload["total"] >= 1
+    assert all(item["category"] == "siyaasad" for item in alias_payload["items"])
 
     empty_response = client.get("/news?category=nonexistent")
     empty_payload = empty_response.json()

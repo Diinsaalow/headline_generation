@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
+import { getCategoryLabel } from "@/lib/categories";
 import type { PublicNewsDetail } from "@/lib/types";
 
 function formatDate(dateString: string) {
@@ -99,8 +100,8 @@ export default function NewsDetailPage() {
                   Published {formatDate(displayDate)}
                 </time>
               )}
-              <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium capitalize text-blue-700">
-                {item.category}
+              <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                {getCategoryLabel(item.category)}
               </span>
             </div>
 

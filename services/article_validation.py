@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 MAX_INPUT_TOKENS = 512
 PROMPT_PREFIX = "generate Somali headline and category: "
@@ -7,10 +8,6 @@ CHARS_PER_TOKEN_ESTIMATE = 3
 MIN_ARTICLE_WORDS = 5
 
 ARABIC_SCRIPT_PATTERN = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]")
-NON_LATIN_SCRIPT_PATTERN = re.compile(
-    r"[\u0400-\u04FF\u0370-\u03FF\u0590-\u05FF\u0900-\u097F"
-    r"\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]"
-)
 MATH_PATTERN = re.compile(
     r"(\d+\s*[+\-*/^=]\s*\d+)|(\$\$)|(\\frac\b)|(\bintegral\b)|(\bsqrt\b)",
     re.IGNORECASE,
@@ -57,25 +54,24 @@ def _word_list(text: str) -> list[str]:
     return [word.lower() for word in WORD_PATTERN.findall(text)]
 
 
-def validate_somali_article(
-    text: str,
-    *,
-    max_characters: int | None = None,
-) -> dict:
+def _contains_non_latin_letter(text: str) -> bool:
+    for character in text:
+        if not unicodedata.category(character).startswith("L"):
+            continue
+        try:
+            name = unicodedata.name(character)
+        except ValueError:
+            return True
+        if not name.startswith("LATIN"):
+            return True
+    return False
+
+
+def validate_somali_article(text: str) -> dict:
     cleaned = re.sub(r"\s+", " ", text.strip())
-    character_limit = max_characters or get_article_character_limit()
 
     if not cleaned:
         return {"valid": False, "message": "Article text is required."}
-
-    if len(cleaned) > character_limit:
-        return {
-            "valid": False,
-            "message": (
-                f"Article is too long. Maximum {character_limit:,} characters "
-                f"are allowed for the selected model."
-            ),
-        }
 
     if ARABIC_SCRIPT_PATTERN.search(cleaned):
         return {
@@ -83,10 +79,10 @@ def validate_somali_article(
             "message": "Arabic script is not allowed. Please paste a Somali article written in Latin letters.",
         }
 
-    if NON_LATIN_SCRIPT_PATTERN.search(cleaned):
+    if _contains_non_latin_letter(cleaned):
         return {
             "valid": False,
-            "message": "Only Somali text in Latin letters is accepted. Remove other scripts such as Cyrillic or Chinese characters.",
+            "message": "Only Somali text in Latin letters is accepted. Scripts such as Amharic, Chinese, or Cyrillic are not allowed.",
         }
 
     if MATH_PATTERN.search(cleaned):
@@ -144,16 +140,10 @@ def validate_somali_article(
             "message": "The text does not look like Somali. Please paste a Somali news article.",
         }
 
-    if somali_hits == 0 and english_ratio >= 0.08:
+    if somali_hits == 0:
         return {
             "valid": False,
             "message": "Could not detect Somali language patterns. Please paste a Somali news article.",
-        }
-
-    if somali_hits == 0 and len(meaningful_words) < 12:
-        return {
-            "valid": False,
-            "message": "The article is too short to verify Somali language. Please paste a longer Somali news article.",
         }
 
     return {"valid": True, "message": None}

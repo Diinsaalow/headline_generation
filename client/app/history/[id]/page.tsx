@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import AuthGate from "@/components/auth/AuthGate";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { apiFetch } from "@/lib/api";
+import { getCategoryLabel } from "@/lib/categories";
 import { formatGenerationTime } from "@/lib/text-format";
 import type { HistoryItem } from "@/lib/types";
 
@@ -143,8 +144,8 @@ export default function HistoryDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium capitalize text-blue-700">
-                    {item.category}
+                  <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                    {getCategoryLabel(item.category)}
                   </span>
                   <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
                     {item.model_used}

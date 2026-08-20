@@ -4,7 +4,7 @@ import re
 from fastapi import HTTPException, status
 from pymongo import DESCENDING
 
-from services.categories import get_system_news_categories
+from services.categories import get_category_query_values, get_system_news_categories, normalize_category
 from services.history_service import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -41,7 +41,7 @@ def serialize_public_news_summary(document: dict) -> dict:
     return {
         "id": str(document["_id"]),
         "headline": document["headline"],
-        "category": document.get("category", "unknown"),
+        "category": normalize_category(document.get("category")),
         "created_at": document["created_at"],
         "article_preview": truncate_article_preview(document["article"]),
         "published_at": document.get("published_at"),
@@ -74,8 +74,9 @@ def _build_public_news_query(
                 }
             )
 
-    if category:
-        conditions.append({"category": category.strip().lower()})
+    category_values = get_category_query_values(category)
+    if category_values:
+        conditions.append({"category": {"$in": category_values}})
 
     if len(conditions) == 1:
         return conditions[0]

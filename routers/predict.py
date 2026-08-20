@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from dependencies.auth import get_current_user
 from schemas.predict import ArticleRequest, ModelsResponse, PredictionResponse
-from services.article_validation import get_article_character_limit, validate_somali_article
+from services.article_validation import get_model_limits, validate_somali_article
 from services.history_service import create_history_entry
-from services.article_validation import get_model_limits
 from services.inference import get_available_models, get_default_model_id, run_inference
 
 router = APIRouter(tags=["prediction"])
@@ -35,10 +34,7 @@ def predict(request: ArticleRequest, current_user: dict = Depends(get_current_us
             detail="Article text is required.",
         )
 
-    validation = validate_somali_article(
-        article,
-        max_characters=get_article_character_limit(),
-    )
+    validation = validate_somali_article(article)
     if not validation["valid"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

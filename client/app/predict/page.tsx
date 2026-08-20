@@ -15,11 +15,9 @@ import GenerationTimer from "@/components/predict/GenerationTimer";
 import ModelSelect from "@/components/predict/ModelSelect";
 import PredictHero from "@/components/predict/PredictHero";
 import Toast from "@/components/ui/Toast";
-import {
-  getCharacterCountState,
-  validateSomaliArticle,
-} from "@/lib/article-validation";
+import { validateSomaliArticle } from "@/lib/article-validation";
 import { apiFetch } from "@/lib/api";
+import { normalizeCategory } from "@/lib/categories";
 import { countWords, formatGeneratedHeadline } from "@/lib/text-format";
 import type {
   GeneratedDraft,
@@ -30,18 +28,11 @@ import type {
   PublishNewsResponse,
 } from "@/lib/types";
 
-const DEFAULT_MAX_CHARACTERS = 1476;
-const DEFAULT_MIN_WORDS = 5;
-
 export default function PredictPage() {
   const { token } = useAuth();
   const [article, setArticle] = useState("");
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
-  const [modelLimits, setModelLimits] = useState({
-    maxCharacters: DEFAULT_MAX_CHARACTERS,
-    minWords: DEFAULT_MIN_WORDS,
-  });
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [draft, setDraft] = useState<GeneratedDraft | null>(null);
@@ -67,34 +58,12 @@ export default function PredictPage() {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  const selectedModelInfo = useMemo(
-    () => models.find((model) => model.id === selectedModel) ?? null,
-    [models, selectedModel],
-  );
-
-  const activeLimits = useMemo(
-    () => ({
-      maxCharacters:
-        selectedModelInfo?.max_article_characters ?? modelLimits.maxCharacters,
-      minWords: selectedModelInfo?.min_article_words ?? modelLimits.minWords,
-    }),
-    [modelLimits, selectedModelInfo],
-  );
-
   const validation = useMemo(
     () =>
       article.trim()
-        ? validateSomaliArticle(article, {
-            maxCharacters: activeLimits.maxCharacters,
-            minWords: activeLimits.minWords,
-          })
+        ? validateSomaliArticle(article)
         : { valid: false, message: null },
-    [article, activeLimits.maxCharacters, activeLimits.minWords],
-  );
-
-  const characterCount = getCharacterCountState(
-    article.length,
-    activeLimits.maxCharacters,
+    [article],
   );
 
   useEffect(() => {
@@ -108,10 +77,6 @@ export default function PredictPage() {
         const availableModels = Array.isArray(data.models) ? data.models : [];
 
         setModels(availableModels);
-        setModelLimits({
-          maxCharacters: data.max_article_characters ?? DEFAULT_MAX_CHARACTERS,
-          minWords: data.min_article_words ?? DEFAULT_MIN_WORDS,
-        });
         setSelectedModel(
           data.default_model &&
             availableModels.some((model) => model.id === data.default_model)
@@ -204,15 +169,8 @@ export default function PredictPage() {
   }
 
   function handleArticleChange(value: string) {
-    if (value.length <= activeLimits.maxCharacters) {
-      invalidateDraftIfChanged(value);
-      setArticle(value);
-    } else {
-      const trimmed = value.slice(0, activeLimits.maxCharacters);
-      invalidateDraftIfChanged(trimmed);
-      setArticle(trimmed);
-    }
-
+    invalidateDraftIfChanged(value);
+    setArticle(value);
     setValidationMessage(null);
     setError(null);
   }
@@ -252,11 +210,7 @@ export default function PredictPage() {
       return;
     }
 
-    const submitValidation = validateSomaliArticle(trimmedArticle, {
-      maxCharacters: activeLimits.maxCharacters,
-      minWords: activeLimits.minWords,
-    });
-
+    const submitValidation = validateSomaliArticle(trimmedArticle);
     if (!submitValidation.valid) {
       setValidationMessage(submitValidation.message);
       return;
@@ -290,31 +244,21 @@ export default function PredictPage() {
         },
       });
 
-      const duration =
-        startTimeRef.current !== null
-          ? (performance.now() - startTimeRef.current) / 1000
-          : data.generation_time_seconds;
-
-      setFinalSeconds(duration);
+      setFinalSeconds(data.generation_time_seconds);
 
       if (data.status === "success" && data.headline) {
         setDraft({
           article: trimmedArticle,
           headline: formatGeneratedHeadline(data.headline),
-          category: data.category,
+          category: normalizeCategory(data.category),
           model_used: data.model_used,
-          generation_time_seconds:
-            data.generation_time_seconds ?? duration ?? 0,
+          generation_time_seconds: data.generation_time_seconds,
         });
         setResultModalOpen(true);
       } else if (data.error_message) {
         setError(data.error_message);
       }
     } catch (submitError) {
-      if (startTimeRef.current !== null) {
-        setFinalSeconds((performance.now() - startTimeRef.current) / 1000);
-      }
-
       setError(
         submitError instanceof Error
           ? submitError.message
@@ -322,6 +266,7 @@ export default function PredictPage() {
       );
     } finally {
       clearTimer();
+      setElapsedSeconds(null);
       setLoading(false);
     }
   }
@@ -436,13 +381,6 @@ export default function PredictPage() {
     !modelsLoading &&
     !loading;
 
-  const counterClassName =
-    characterCount.tone === "error"
-      ? "text-red-600"
-      : characterCount.tone === "warning"
-        ? "text-amber-600"
-        : "text-slate-400";
-
   return (
     <AuthGate>
       <main className="flex-1 bg-slate-50/50">
@@ -471,8 +409,9 @@ export default function PredictPage() {
                   Article text
                 </label>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className={`text-xs ${counterClassName}`}>
-                    {characterCount.label}
+                  <span className="text-xs text-slate-400">
+                    {article.length.toLocaleString()}{" "}
+                    {article.length === 1 ? "character" : "characters"}
                   </span>
                   <span className="text-xs text-slate-400">
                     {countWords(article).toLocaleString()} words
@@ -496,7 +435,6 @@ export default function PredictPage() {
                 onChange={(event) => handleArticleChange(event.target.value)}
                 placeholder="Paste your Somali news article here..."
                 disabled={loading}
-                maxLength={activeLimits.maxCharacters}
                 aria-invalid={Boolean(
                   validationMessage || (article.trim() && !validation.valid),
                 )}

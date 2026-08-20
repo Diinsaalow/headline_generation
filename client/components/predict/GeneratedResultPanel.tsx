@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { getCategoryLabel } from "@/lib/categories";
 import { countWords, formatGenerationTime } from "@/lib/text-format";
 import type { GeneratedDraft } from "@/lib/types";
 
@@ -88,8 +89,8 @@ export default function GeneratedResultPanel({
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
             Category
           </p>
-          <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium capitalize text-blue-700">
-            {draft.category}
+          <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+            {getCategoryLabel(draft.category)}
           </span>
         </div>
 

@@ -65,7 +65,7 @@ def client(mock_db):
 
 def seed_history(user_id: str, count: int = 3) -> list[dict]:
     items = []
-    categories = ["politics", "sports", "business"]
+    categories = ["siyaasad", "ciyaaro", "amni"]
     models = ["model-a", "model-b"]
     now = datetime.now(timezone.utc)
 
