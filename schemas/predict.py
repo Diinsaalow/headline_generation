@@ -26,6 +26,7 @@ class PredictionResponse(BaseModel):
 class ModelInfo(ModelInputLimits):
     id: str
     name: str
+    recommended: bool = False
 
 
 class ModelsResponse(ModelInputLimits):

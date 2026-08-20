@@ -11,6 +11,32 @@ type ModelSelectProps = {
   error?: string | null;
 };
 
+export function isRecommendedModel(model: ModelInfo): boolean {
+  return (
+    model.recommended === true ||
+    /afriteva/i.test(model.id) ||
+    /afriteva/i.test(model.name)
+  );
+}
+
+export function pickDefaultModelId(
+  models: ModelInfo[],
+  apiDefault?: string | null,
+): string {
+  const recommendedId = models.find(isRecommendedModel)?.id;
+  if (recommendedId) {
+    return recommendedId;
+  }
+
+  if (apiDefault && models.some((model) => model.id === apiDefault)) {
+    return apiDefault;
+  }
+
+  return models[0]?.id ?? "";
+}
+
+
+
 export default function ModelSelect({
   models,
   selectedModel,
@@ -19,13 +45,13 @@ export default function ModelSelect({
   loading = false,
   error = null,
 }: ModelSelectProps) {
+  const selectedModelInfo =
+    models.find((model) => model.id === selectedModel) ?? null;
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-4">
-        <label
-          htmlFor="model"
-          className="block text-sm font-medium text-slate-700"
-        >
+        <label htmlFor="model" className="block text-sm font-medium text-slate-700">
           Model
         </label>
         {!loading && models.length > 0 && (
@@ -69,6 +95,15 @@ export default function ModelSelect({
       </div>
 
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+
+      {selectedModelInfo && (
+        <p className="mt-2 text-xs text-slate-500">
+          This model accepts up to{" "}
+          {selectedModelInfo.max_article_characters.toLocaleString()} characters
+          ({selectedModelInfo.max_input_tokens} tokens, min{" "}
+          {selectedModelInfo.min_article_words} words).
+        </p>
+      )}
     </div>
   );
 }

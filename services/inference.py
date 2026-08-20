@@ -11,9 +11,36 @@ MODELS_DIR = Path("models")
 MAX_INPUT_LENGTH = 512
 MAX_TARGET_LENGTH = 96
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+PREFERRED_MODEL_TOKEN = "afriteva"
 
 _DEFAULT_MODEL_ID: str | None = None
 _model_cache: dict[str, dict] = {}
+
+
+def is_preferred_model(model_id: str) -> bool:
+    return PREFERRED_MODEL_TOKEN in model_id.lower()
+
+
+def get_model_display_name(model_id: str) -> str:
+    if is_preferred_model(model_id):
+        remainder = re.sub(r"(?i)afriteva[-_]?", "", model_id).strip("-_ ")
+        if remainder:
+            pretty_remainder = remainder.replace("-", " ").replace("_", " ").title()
+            return f"AfriTeVa {pretty_remainder}"
+        return "AfriTeVa"
+
+    return model_id.replace("-", " ").replace("_", " ").title()
+
+
+def pick_default_model_id(models: list[dict]) -> str | None:
+    if not models:
+        return None
+
+    preferred = next(
+        (model for model in models if is_preferred_model(model["id"])),
+        None,
+    )
+    return (preferred or models[0])["id"]
 
 
 def get_available_models() -> list[dict]:
@@ -26,10 +53,14 @@ def get_available_models() -> list[dict]:
             available.append(
                 {
                     "id": folder.name,
-                    "name": folder.name.replace("-", " ").replace("_", " ").title(),
+                    "name": get_model_display_name(folder.name),
+                    "recommended": is_preferred_model(folder.name),
                 }
             )
 
+    available.sort(
+        key=lambda model: (not model["recommended"], model["id"].lower())
+    )
     return available
 
 
@@ -77,8 +108,9 @@ def initialize_default_model() -> None:
         _DEFAULT_MODEL_ID = None
         return
 
-    _DEFAULT_MODEL_ID = available_models[0]["id"]
-    load_model(_DEFAULT_MODEL_ID)
+    _DEFAULT_MODEL_ID = pick_default_model_id(available_models)
+    if _DEFAULT_MODEL_ID:
+        load_model(_DEFAULT_MODEL_ID)
 
 
 def normalize_spaces(text: str) -> str:
